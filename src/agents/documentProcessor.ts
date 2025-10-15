@@ -2,7 +2,8 @@ import * as pdfjsLib from 'pdfjs-dist'
 import Tesseract from 'tesseract.js'
 
 // Configurar worker de PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+// El worker debe estar en la carpeta public/
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 export interface ProcessedDocument {
   text: string
