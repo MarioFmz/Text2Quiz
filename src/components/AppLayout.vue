@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
+import ToastContainer from './ToastContainer.vue'
 
 const { user, signOut } = useAuth()
 const router = useRouter()
@@ -161,6 +162,9 @@ const closeMobileMenu = () => {
     <main>
       <slot />
     </main>
+
+    <!-- Toast Notifications -->
+    <ToastContainer />
   </div>
 </template>
 

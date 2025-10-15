@@ -4,9 +4,11 @@ import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { quizzesService } from '@/services/quizzesService'
+import { useToast } from '@/composables/useToast'
 
 const { user } = useAuth()
 const router = useRouter()
+const { success } = useToast()
 
 const stats = ref({
   totalDocuments: 0,
@@ -60,7 +62,7 @@ const getShareUrl = (slug: string) => {
 const copyToClipboard = async (url: string) => {
   try {
     await navigator.clipboard.writeText(url)
-    alert('¡Enlace copiado!')
+    success('¡Enlace copiado al portapapeles!')
   } catch (error) {
     console.error('Error copying:', error)
   }

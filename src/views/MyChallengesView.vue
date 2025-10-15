@@ -3,9 +3,11 @@ import AppLayout from '@/components/AppLayout.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 
 const { user } = useAuth()
 const router = useRouter()
+const { success } = useToast()
 
 const loading = ref(true)
 const challenges = ref<any[]>([])
@@ -40,7 +42,7 @@ const loadMyChallenges = async () => {
 const copyToClipboard = async (url: string) => {
   try {
     await navigator.clipboard.writeText(url)
-    alert('¡Enlace copiado al portapapeles!')
+    success('¡Enlace copiado al portapapeles!')
   } catch (error) {
     console.error('Error copying to clipboard:', error)
   }
