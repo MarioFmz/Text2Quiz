@@ -49,6 +49,12 @@ const closeMobileMenu = () => {
               Documentos
             </router-link>
             <router-link
+              to="/practice"
+              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+            >
+              ⚡ Práctica
+            </router-link>
+            <router-link
               to="/upload"
               class="btn btn-primary text-sm"
             >
@@ -125,6 +131,13 @@ const closeMobileMenu = () => {
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
             >
               Documentos
+            </router-link>
+            <router-link
+              to="/practice"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              ⚡ Práctica Rápida
             </router-link>
             <router-link
               to="/upload"

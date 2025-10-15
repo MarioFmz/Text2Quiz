@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
+import ShareQuizButton from '@/components/ShareQuizButton.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
@@ -176,6 +177,11 @@ const formatDate = (dateString: string) => {
             <button @click="restartQuiz" class="btn btn-secondary w-full sm:w-auto">
               Reintentar
             </button>
+            <ShareQuizButton
+              v-if="quiz"
+              :quiz-id="quiz.id"
+              :quiz-title="quiz.title"
+            />
             <button @click="goToDocuments" class="btn btn-primary w-full sm:w-auto">
               Ver documentos
             </button>

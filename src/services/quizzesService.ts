@@ -211,6 +211,32 @@ export class QuizzesService {
 
     if (error) throw error
   }
+
+  /**
+   * Obtiene todas las preguntas de los quizzes de un usuario
+   * Útil para modos de práctica rápida
+   */
+  async getAllQuestions(userId: string): Promise<Question[]> {
+    // Primero obtenemos todos los quiz IDs del usuario
+    const { data: quizzes, error: quizzesError } = await supabase
+      .from('quizzes')
+      .select('id')
+      .eq('user_id', userId)
+
+    if (quizzesError) throw quizzesError
+    if (!quizzes || quizzes.length === 0) return []
+
+    const quizIds = quizzes.map(q => q.id)
+
+    // Luego obtenemos todas las preguntas de esos quizzes
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('*')
+      .in('quiz_id', quizIds)
+
+    if (questionsError) throw questionsError
+    return questions || []
+  }
 }
 
 // Exportar instancia singleton
