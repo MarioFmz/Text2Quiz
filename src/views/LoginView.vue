@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 
 const router = useRouter()
+const route = useRoute()
 const { signIn } = useAuth()
 
 const email = ref('')
@@ -18,7 +19,10 @@ const handleSubmit = async () => {
     loading.value = true
 
     await signIn(email.value, password.value)
-    router.push('/dashboard')
+
+    // Redirigir a la URL original si existe, sino al dashboard
+    const redirectUrl = route.query.redirect as string
+    router.push(redirectUrl || '/dashboard')
   } catch (e: any) {
     error.value = e.message || 'Error al iniciar sesión'
   } finally {

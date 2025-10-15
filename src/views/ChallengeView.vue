@@ -27,6 +27,14 @@ const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 
 onMounted(async () => {
+  // Verificar autenticación
+  if (!user.value) {
+    // Guardar la URL actual para redirigir después del login
+    const currentPath = route.fullPath
+    router.push(`/login?redirect=${encodeURIComponent(currentPath)}`)
+    return
+  }
+
   await loadChallenge()
 })
 

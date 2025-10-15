@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 
 const router = useRouter()
-const { signUp } = useAuth()
+const route = useRoute()
+const { signUp, signIn } = useAuth()
 
 const email = ref('')
 const password = ref('')
@@ -32,10 +33,12 @@ const handleSubmit = async () => {
     await signUp(email.value, password.value)
     success.value = true
 
-    // Redirigir después de registro exitoso
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
+    // Login automático después del registro (sin confirmación de email)
+    await signIn(email.value, password.value)
+
+    // Redirigir a la URL original si existe, sino al dashboard
+    const redirectUrl = route.query.redirect as string
+    router.push(redirectUrl || '/dashboard')
   } catch (e: any) {
     error.value = e.message || 'Error al registrarse'
   } finally {
