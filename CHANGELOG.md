@@ -15,7 +15,12 @@ All notable changes to this project will be documented in this file.
 - 📄 Document upload with drag & drop
 - 🎯 Interactive quiz interface with results
 - 🗄️ Complete database schema with RLS policies
-- 📝 Comprehensive documentation (README, SETUP)
+- 📝 Comprehensive documentation (README, SETUP, CHANGELOG)
+- 🔍 **OCR Fallback for Scanned PDFs**: Automatically detects and processes scanned PDFs
+  - Renders PDF pages to canvas
+  - Applies Tesseract OCR to each page
+  - Parallel processing for better performance
+  - Progress indicators in UI
 
 ### Fixed
 - 🐛 Sanitize file names to remove special characters before upload
@@ -26,6 +31,10 @@ All notable changes to this project will be documented in this file.
   - Copy worker to public/ folder
   - Add postinstall script for automatic setup
   - Fixes 404 errors when loading PDF.js worker
+- 🐛 Better error handling and validation
+  - Validate extracted text is not empty
+  - Detailed console logging for debugging
+  - Specific error messages for different failure scenarios
 
 ### Changed
 - 🔧 Remove unused Anthropic SDK dependency
@@ -34,9 +43,11 @@ All notable changes to this project will be documented in this file.
 ### Technical Details
 
 #### Document Processing
-- **PDFs**: Uses `pdf.js` for text extraction
-- **Images**: Uses `tesseract.js` for OCR
+- **Native PDFs**: Uses `pdf.js` for direct text extraction
+- **Scanned PDFs**: Automatic OCR fallback with Tesseract.js
+- **Images**: Direct OCR processing with Tesseract.js
 - **File Naming**: Automatic sanitization for storage compatibility
+- **Supported Formats**: PDF, JPG, PNG (up to 10MB)
 
 #### AI Integration
 - **Model**: OpenAI GPT-4o-mini
@@ -63,10 +74,12 @@ All notable changes to this project will be documented in this file.
 - `deaafbd` - docs: Update README with comprehensive information
 - `67b55de` - chore: Remove unused Anthropic SDK
 
-### Bug Fixes
+### Bug Fixes & Features
 - `f029161` - fix: Sanitize file names before upload
 - `b69e517` - fix: Configure PDF.js worker for Vite
 - `96e8e8a` - chore: Add postinstall script for PDF.js worker
+- `e236d0f` - fix: Add better error handling and validation
+- `bf43a14` - feat: Add OCR fallback for scanned PDFs ⭐
 
 ---
 
