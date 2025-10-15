@@ -240,8 +240,12 @@ function generateShareSlug(title) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
   const random = Math.random().toString(36).substring(2, 8);
-  return `${slug}-${random}`;
+  const fullSlug = `${slug}-${random}`;
+
+  // Limitar a 50 caracteres (límite de la base de datos)
+  return fullSlug.substring(0, 50);
 }
 
 // Crear un challenge compartido
