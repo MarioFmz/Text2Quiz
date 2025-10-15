@@ -23,6 +23,7 @@ const submitting = ref(false)
 const username = ref('')
 const leaderboard = ref<any[]>([])
 const showLeaderboard = ref(false)
+const creatorAttempt = ref<any>(null)
 
 onMounted(async () => {
   await loadChallenge()
@@ -61,6 +62,9 @@ const loadLeaderboard = async () => {
     if (response.ok) {
       const data = await response.json()
       leaderboard.value = data.leaderboard
+
+      // Encontrar el intento del creador
+      creatorAttempt.value = leaderboard.value.find((attempt: any) => attempt.is_creator)
     }
   } catch (error) {
     console.error('Error loading leaderboard:', error)
@@ -213,14 +217,20 @@ const getRankEmoji = (rank: number) => {
               v-for="(entry, index) in leaderboard"
               :key="entry.id"
               class="flex items-center justify-between p-3 rounded-lg"
-              :class="entry.username === username ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50'"
+              :class="[
+                entry.username === username ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50',
+                entry.is_creator ? 'border-2 border-orange-300' : ''
+              ]"
             >
               <div class="flex items-center space-x-3">
                 <span class="text-lg font-bold min-w-[3rem]">
                   {{ getRankEmoji(index + 1) }}
                 </span>
                 <div>
-                  <p class="font-semibold">{{ entry.username }}</p>
+                  <div class="flex items-center space-x-2">
+                    <p class="font-semibold">{{ entry.username }}</p>
+                    <span v-if="entry.is_creator" class="text-lg" title="Creador del desafío">👑</span>
+                  </div>
                   <p class="text-xs text-gray-500">{{ entry.time_taken }}s</p>
                 </div>
               </div>
@@ -316,9 +326,47 @@ const getRankEmoji = (rank: number) => {
           >
             Comenzar desafío
           </button>
+        </div>
 
+        <!-- Creator Challenge Banner -->
+        <div v-if="creatorAttempt" class="card bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-2 mb-2">
+                <span class="text-2xl">👑</span>
+                <h3 class="text-lg font-bold text-orange-900">Desafío del Creador</h3>
+              </div>
+              <p class="text-sm text-gray-700 mb-1">
+                <strong>{{ creatorAttempt.username }}</strong> completó este quiz con:
+              </p>
+              <div class="flex items-center space-x-4 mt-2">
+                <div>
+                  <span class="text-2xl font-bold text-orange-600">{{ creatorAttempt.percentage }}%</span>
+                  <span class="text-xs text-gray-600 ml-1">
+                    ({{ creatorAttempt.score }}/{{ creatorAttempt.total_questions }})
+                  </span>
+                </div>
+                <div class="text-sm text-gray-600">
+                  ⏱️ {{ Math.floor(creatorAttempt.time_taken / 60) }}:{{ (creatorAttempt.time_taken % 60).toString().padStart(2, '0') }} min
+                </div>
+              </div>
+            </div>
+            <div class="text-center ml-4">
+              <div class="text-4xl">
+                {{ creatorAttempt.percentage >= 90 ? '🏆' : creatorAttempt.percentage >= 70 ? '🎯' : '📚' }}
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-orange-200">
+            <p class="text-sm font-semibold text-orange-800 text-center">
+              ¿Puedes superarlo?
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
           <!-- Current Leaderboard Preview -->
-          <div v-if="leaderboard.length > 0" class="mt-6 pt-6 border-t">
+          <div v-if="leaderboard.length > 0">
             <h3 class="text-sm font-semibold text-gray-700 mb-3">🏆 Top 3 actual</h3>
             <div class="space-y-2">
               <div

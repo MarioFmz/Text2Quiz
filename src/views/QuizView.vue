@@ -22,6 +22,8 @@ const showSummary = ref(true) // Mostrar resumen al inicio
 const loading = ref(true)
 const submitting = ref(false)
 const previousAttempts = ref<any[]>([])
+const quizStartTime = ref<number>(0)
+const quizTimeTaken = ref<number>(0)
 
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const progress = computed(() => ((currentQuestionIndex.value + 1) / questions.value.length) * 100)
@@ -66,6 +68,11 @@ const submitQuiz = async () => {
 
   submitting.value = true
   try {
+    // Calcular tiempo tomado
+    if (quizStartTime.value > 0) {
+      quizTimeTaken.value = Math.floor((Date.now() - quizStartTime.value) / 1000)
+    }
+
     // Guardar respuestas
     for (const question of questions.value) {
       const selectedAnswer = userAnswers.value[question.id]
@@ -127,6 +134,7 @@ const goToDocuments = () => {
 
 const startQuiz = () => {
   showSummary.value = false
+  quizStartTime.value = Date.now()
 }
 
 const formatDate = (dateString: string) => {
@@ -178,9 +186,14 @@ const formatDate = (dateString: string) => {
               Reintentar
             </button>
             <ShareQuizButton
-              v-if="quiz"
+              v-if="quiz && user"
               :quiz-id="quiz.id"
               :quiz-title="quiz.title"
+              :creator-id="user.id"
+              :creator-username="user.email?.split('@')[0] || 'Usuario'"
+              :creator-score="calculateResults().correct"
+              :total-questions="questions.length"
+              :time-taken="quizTimeTaken"
             />
             <button @click="goToDocuments" class="btn btn-primary w-full sm:w-auto">
               Ver documentos

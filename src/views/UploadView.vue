@@ -216,7 +216,7 @@ const cancelQuizGeneration = () => {
 
       <!-- Quiz Options Modal -->
       <QuizOptionsModal
-        v-if="showQuizOptionsModal"
+        :show="showQuizOptionsModal"
         @generate="generateQuizWithOptions"
         @cancel="cancelQuizGeneration"
       />

@@ -247,9 +247,18 @@ function generateShareSlug(title) {
 // Crear un challenge compartido
 app.post('/api/challenges/create', async (req, res) => {
   try {
-    const { quizId, creatorId, showCreatorScore = true, hasLeaderboard = true } = req.body;
+    const {
+      quizId,
+      creatorId,
+      creatorUsername,
+      creatorScore,
+      totalQuestions,
+      timeTaken = 0,
+      showCreatorScore = true,
+      hasLeaderboard = true
+    } = req.body;
 
-    if (!quizId || !creatorId) {
+    if (!quizId || !creatorId || creatorScore === undefined || !totalQuestions) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -300,6 +309,27 @@ app.post('/api/challenges/create', async (req, res) => {
 
     console.log(`Challenge created: ${shareCode}`);
 
+    // Crear el intento inicial del creador
+    const { data: creatorAttempt, error: attemptError } = await supabase
+      .from('challenge_attempts')
+      .insert({
+        challenge_id: challenge.id,
+        user_id: creatorId,
+        username: creatorUsername || 'Creador',
+        score: creatorScore,
+        total_questions: totalQuestions,
+        time_taken: timeTaken
+      })
+      .select()
+      .single();
+
+    if (attemptError) {
+      console.error('Error creating creator attempt:', attemptError);
+      // No lanzar error, continuar con la respuesta
+    } else {
+      console.log(`Creator attempt saved: ${creatorUsername} - ${creatorScore}/${totalQuestions}`);
+    }
+
     res.json({
       success: true,
       challenge: {
@@ -307,7 +337,9 @@ app.post('/api/challenges/create', async (req, res) => {
         shareCode: challenge.share_code,
         shareSlug: challenge.share_slug,
         shareUrl: `/challenge/${challenge.share_slug}`
-      }
+      },
+      share_code: shareCode,
+      share_slug: shareSlug
     });
   } catch (error) {
     console.error('Error creating challenge:', error);
@@ -360,6 +392,15 @@ app.get('/api/challenges/:challengeId/leaderboard', async (req, res) => {
   try {
     const { challengeId } = req.params;
 
+    // Primero obtener el creator_id del challenge
+    const { data: challenge, error: challengeError } = await supabase
+      .from('quiz_challenges')
+      .select('creator_id')
+      .eq('id', challengeId)
+      .single();
+
+    if (challengeError) throw challengeError;
+
     const { data: attempts, error: attemptsError } = await supabase
       .from('challenge_attempts')
       .select('*')
@@ -370,9 +411,16 @@ app.get('/api/challenges/:challengeId/leaderboard', async (req, res) => {
 
     if (attemptsError) throw attemptsError;
 
+    // Marcar qué intentos son del creador
+    const leaderboardWithCreatorFlag = (attempts || []).map(attempt => ({
+      ...attempt,
+      is_creator: attempt.user_id === challenge.creator_id
+    }));
+
     res.json({
       success: true,
-      leaderboard: attempts || []
+      leaderboard: leaderboardWithCreatorFlag,
+      creator_id: challenge.creator_id
     });
   } catch (error) {
     console.error('Error getting leaderboard:', error);

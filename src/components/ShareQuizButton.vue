@@ -4,6 +4,11 @@ import { ref } from 'vue'
 interface Props {
   quizId: string
   quizTitle: string
+  creatorId: string
+  creatorUsername: string
+  creatorScore: number
+  totalQuestions: number
+  timeTaken?: number // Optional, in seconds
 }
 
 const props = defineProps<Props>()
@@ -13,6 +18,7 @@ const loading = ref(false)
 const shareUrl = ref('')
 const shareCode = ref('')
 const copied = ref(false)
+const creatorPercentage = ref(Math.round((props.creatorScore / props.totalQuestions) * 100))
 
 const generateShareLink = async () => {
   loading.value = true
@@ -21,7 +27,14 @@ const generateShareLink = async () => {
     const response = await fetch(`${apiUrl}/api/challenges/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quizId: props.quizId })
+      body: JSON.stringify({
+        quizId: props.quizId,
+        creatorId: props.creatorId,
+        creatorUsername: props.creatorUsername,
+        creatorScore: props.creatorScore,
+        totalQuestions: props.totalQuestions,
+        timeTaken: props.timeTaken || 0
+      })
     })
 
     if (!response.ok) {
@@ -95,6 +108,23 @@ const closeModal = () => {
 
             <!-- Content -->
             <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <!-- Creator Score Banner -->
+              <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm opacity-90 mb-1">Tu puntuación:</p>
+                    <p class="text-3xl font-bold">{{ creatorPercentage }}%</p>
+                    <p class="text-xs opacity-75 mt-1">{{ creatorScore }}/{{ totalQuestions }} correctas</p>
+                  </div>
+                  <div class="text-5xl">
+                    {{ creatorPercentage >= 90 ? '🏆' : creatorPercentage >= 70 ? '🎯' : '📚' }}
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-white border-opacity-30">
+                  <p class="text-sm font-semibold">¡Reta a tus amigos a superarte!</p>
+                </div>
+              </div>
+
               <!-- Quiz Title -->
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-600 mb-1">Quiz a compartir:</p>
