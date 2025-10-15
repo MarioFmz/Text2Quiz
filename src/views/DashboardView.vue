@@ -16,74 +16,96 @@ const stats = ref({
 })
 const loading = ref(true)
 const userStreak = ref({ current_streak: 0, longest_streak: 0 })
+const myChallenges = ref<any[]>([])
+const loadingChallenges = ref(true)
 
 onMounted(async () => {
   if (user.value) {
+    // Load stats
     stats.value = await quizzesService.getUserStats(user.value.id)
-    // TODO: Load streak from API
     loading.value = false
+
+    // Load user challenges
+    await loadMyChallenges()
   }
 })
 
+const loadMyChallenges = async () => {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const response = await fetch(`${apiUrl}/api/challenges/my-challenges?userId=${user.value?.id}`)
+
+    if (response.ok) {
+      const data = await response.json()
+      // Only show active challenges, limit to 3
+      myChallenges.value = (data.challenges || [])
+        .filter((c: any) => c.is_active)
+        .slice(0, 3)
+    }
+  } catch (error) {
+    console.error('Error loading challenges:', error)
+  } finally {
+    loadingChallenges.value = false
+  }
+}
+
 const startPracticeMode = (mode: string) => {
   router.push(`/practice?mode=${mode}`)
+}
+
+const getShareUrl = (slug: string) => {
+  return `${window.location.origin}/challenge/${slug}`
+}
+
+const copyToClipboard = async (url: string) => {
+  try {
+    await navigator.clipboard.writeText(url)
+    alert('¡Enlace copiado!')
+  } catch (error) {
+    console.error('Error copying:', error)
+  }
 }
 </script>
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 class="text-4xl font-bold mb-2">Dashboard</h1>
-      <p class="text-gray-600 mb-12">Bienvenido, {{ user?.email }}</p>
-
-      <div v-if="loading" class="text-center py-12">
-        <p class="text-gray-600">Cargando estadísticas...</p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <!-- Header -->
+      <div class="mb-8 sm:mb-12">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-2">Dashboard</h1>
+        <p class="text-gray-600">Bienvenido, {{ user?.email?.split('@')[0] || 'Usuario' }}</p>
       </div>
 
-      <div v-else class="grid md:grid-cols-3 gap-6">
-        <!-- Estadísticas -->
-        <div class="card">
-          <div class="text-3xl mb-2">📚</div>
-          <div class="text-3xl font-bold mb-1">{{ stats.totalDocuments }}</div>
-          <div class="text-gray-600">Documentos subidos</div>
-        </div>
-
-        <div class="card">
-          <div class="text-3xl mb-2">✅</div>
-          <div class="text-3xl font-bold mb-1">{{ stats.totalQuizzes }}</div>
-          <div class="text-gray-600">Quizzes completados</div>
-        </div>
-
-        <div class="card">
-          <div class="text-3xl mb-2">📈</div>
-          <div class="text-3xl font-bold mb-1">{{ stats.averageAccuracy }}%</div>
-          <div class="text-gray-600">Precisión promedio</div>
-        </div>
-      </div>
-
-      <!-- Práctica Rápida -->
-      <div class="mt-12">
+      <!-- 1. PRÁCTICA RÁPIDA - PRIORIDAD MÁXIMA -->
+      <div class="mb-10 sm:mb-12">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold">⚡ Práctica Rápida</h2>
-          <div v-if="userStreak.current_streak > 0" class="flex items-center space-x-2 bg-orange-50 px-4 py-2 rounded-lg">
-            <span class="text-2xl">🔥</span>
-            <span class="font-bold text-orange-600">{{ userStreak.current_streak }} días</span>
+          <h2 class="text-2xl font-bold flex items-center space-x-2">
+            <span class="text-3xl">⚡</span>
+            <span>Práctica Rápida</span>
+          </h2>
+          <div v-if="userStreak.current_streak > 0" class="flex items-center space-x-2 bg-orange-50 px-3 sm:px-4 py-2 rounded-lg">
+            <span class="text-xl sm:text-2xl">🔥</span>
+            <span class="font-bold text-orange-600 text-sm sm:text-base">{{ userStreak.current_streak }} días</span>
           </div>
         </div>
+
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <!-- Flash Cards -->
+          <!-- Daily Challenge - MÁS DESTACADO -->
           <button
-            @click="startPracticeMode('flashcards')"
-            class="card hover:shadow-xl transition-all text-left p-6 border-2 border-transparent hover:border-blue-300"
+            @click="startPracticeMode('daily')"
+            class="card hover:shadow-2xl transition-all text-left p-6 border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50 relative transform hover:scale-105"
           >
-            <div class="text-4xl sm:text-5xl mb-4">🎴</div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2">Flash Cards</h3>
-            <p class="text-sm text-gray-600 mb-4">
-              Repasa conceptos con tarjetas interactivas
+            <div class="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+              HOY
+            </div>
+            <div class="text-5xl sm:text-6xl mb-4">🌟</div>
+            <h3 class="text-xl sm:text-2xl font-bold mb-2 text-purple-900">Desafío Diario</h3>
+            <p class="text-sm text-gray-700 mb-4 font-medium">
+              ¡Mantén tu racha activa!
             </p>
-            <div class="flex items-center space-x-2 text-xs text-gray-500">
-              <span>📊</span>
-              <span>20 tarjetas</span>
+            <div class="flex items-center space-x-2 text-xs text-gray-600">
+              <span>🔥</span>
+              <span>10 preguntas · 5 min</span>
             </div>
           </button>
 
@@ -103,37 +125,101 @@ const startPracticeMode = (mode: string) => {
             </div>
           </button>
 
-          <!-- Daily Challenge -->
+          <!-- Flash Cards -->
           <button
-            @click="startPracticeMode('daily')"
-            class="card hover:shadow-xl transition-all text-left p-6 border-2 border-transparent hover:border-purple-300 relative"
+            @click="startPracticeMode('flashcards')"
+            class="card hover:shadow-xl transition-all text-left p-6 border-2 border-transparent hover:border-blue-300"
           >
-            <div class="absolute top-4 right-4 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">
-              HOY
-            </div>
-            <div class="text-4xl sm:text-5xl mb-4">🌟</div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2">Desafío Diario</h3>
+            <div class="text-4xl sm:text-5xl mb-4">🎴</div>
+            <h3 class="text-lg sm:text-xl font-bold mb-2">Flash Cards</h3>
             <p class="text-sm text-gray-600 mb-4">
-              Mantén tu racha activa
+              Repasa conceptos clave
             </p>
             <div class="flex items-center space-x-2 text-xs text-gray-500">
-              <span>🔥</span>
-              <span>10 preguntas</span>
+              <span>📊</span>
+              <span>20 tarjetas</span>
             </div>
           </button>
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="mt-12">
+      <!-- 2. MIS DESAFÍOS - SOLO SI TIENE DESAFÍOS -->
+      <div v-if="!loadingChallenges && myChallenges.length > 0" class="mb-10 sm:mb-12">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold flex items-center space-x-2">
+            <span class="text-3xl">🏆</span>
+            <span>Mis Desafíos</span>
+          </h2>
+          <router-link
+            to="/my-challenges"
+            class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Ver todos →
+          </router-link>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div
+            v-for="challenge in myChallenges"
+            :key="challenge.id"
+            class="card hover:shadow-lg transition-shadow"
+          >
+            <div class="mb-4">
+              <h3 class="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+                {{ challenge.quiz_title }}
+              </h3>
+              <div class="text-xs text-gray-500">
+                Compartido hace {{ Math.floor((Date.now() - new Date(challenge.created_at).getTime()) / (1000 * 60 * 60 * 24)) }} días
+              </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              <div class="bg-blue-50 rounded-lg p-2 text-center">
+                <div class="text-lg font-bold text-blue-600">{{ challenge.total_attempts }}</div>
+                <div class="text-xs text-gray-600">Intentos</div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-2 text-center">
+                <div class="text-lg font-bold text-green-600">{{ challenge.best_score }}%</div>
+                <div class="text-xs text-gray-600">Mejor</div>
+              </div>
+              <div class="bg-orange-50 rounded-lg p-2 text-center">
+                <div class="text-lg font-bold text-orange-600">
+                  {{ challenge.creator_rank ? `#${challenge.creator_rank}` : '-' }}
+                </div>
+                <div class="text-xs text-gray-600">Tu Pos</div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex space-x-2">
+              <button
+                @click="copyToClipboard(getShareUrl(challenge.share_slug))"
+                class="btn btn-secondary flex-1 text-xs sm:text-sm py-2"
+              >
+                📋 Copiar
+              </button>
+              <button
+                @click="router.push(`/challenge/${challenge.share_slug}`)"
+                class="btn btn-primary flex-1 text-xs sm:text-sm py-2"
+              >
+                Ver
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. ACCIONES RÁPIDAS -->
+      <div class="mb-10 sm:mb-12">
         <h2 class="text-2xl font-bold mb-6">Acciones rápidas</h2>
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
           <router-link to="/upload" class="card hover:shadow-md transition-shadow">
             <div class="flex items-center space-x-4">
               <div class="text-4xl">📤</div>
               <div>
-                <h3 class="text-xl font-semibold mb-1">Subir documento</h3>
-                <p class="text-gray-600">Sube un PDF o imagen para generar un quiz</p>
+                <h3 class="text-lg sm:text-xl font-semibold mb-1">Subir documento</h3>
+                <p class="text-sm text-gray-600">Sube un PDF o imagen para generar un quiz</p>
               </div>
             </div>
           </router-link>
@@ -142,13 +228,46 @@ const startPracticeMode = (mode: string) => {
             <div class="flex items-center space-x-4">
               <div class="text-4xl">📁</div>
               <div>
-                <h3 class="text-xl font-semibold mb-1">Mis documentos</h3>
-                <p class="text-gray-600">Ver todos tus documentos y quizzes</p>
+                <h3 class="text-lg sm:text-xl font-semibold mb-1">Mis documentos</h3>
+                <p class="text-sm text-gray-600">Ver todos tus documentos y quizzes</p>
               </div>
             </div>
           </router-link>
         </div>
       </div>
+
+      <!-- 4. ESTADÍSTICAS - MENOS PROMINENTE -->
+      <div v-if="!loading">
+        <h2 class="text-xl font-bold mb-4 text-gray-700">Tus estadísticas</h2>
+        <div class="grid grid-cols-3 gap-3 sm:gap-4">
+          <div class="card bg-gray-50 text-center py-4">
+            <div class="text-2xl mb-1">📚</div>
+            <div class="text-2xl font-bold mb-1">{{ stats.totalDocuments }}</div>
+            <div class="text-xs text-gray-600">Documentos</div>
+          </div>
+
+          <div class="card bg-gray-50 text-center py-4">
+            <div class="text-2xl mb-1">✅</div>
+            <div class="text-2xl font-bold mb-1">{{ stats.totalQuizzes }}</div>
+            <div class="text-xs text-gray-600">Quizzes</div>
+          </div>
+
+          <div class="card bg-gray-50 text-center py-4">
+            <div class="text-2xl mb-1">📈</div>
+            <div class="text-2xl font-bold mb-1">{{ stats.averageAccuracy }}%</div>
+            <div class="text-xs text-gray-600">Precisión</div>
+          </div>
+        </div>
+      </div>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
