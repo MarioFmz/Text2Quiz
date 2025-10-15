@@ -259,10 +259,21 @@ const formatDate = (dateString: string) => {
           </div>
 
           <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-            <button @click="goToDocuments" class="btn btn-secondary w-full sm:w-auto order-2 sm:order-1">
+            <button @click="goToDocuments" class="btn btn-secondary w-full sm:w-auto order-3 sm:order-1">
               Volver
             </button>
-            <button @click="startQuiz" class="btn btn-primary w-full sm:w-auto order-1 sm:order-2">
+            <ShareQuizButton
+              v-if="quiz && user && previousAttempts.length > 0"
+              :quiz-id="quiz.id"
+              :quiz-title="quiz.title"
+              :creator-id="user.id"
+              :creator-username="user.email?.split('@')[0] || 'Usuario'"
+              :creator-score="previousAttempts[0]?.score"
+              :total-questions="questions.length"
+              :time-taken="previousAttempts[0]?.time_taken"
+              class="order-2 sm:order-2"
+            />
+            <button @click="startQuiz" class="btn btn-primary w-full sm:w-auto order-1 sm:order-3">
               Comenzar quiz
             </button>
           </div>

@@ -6,7 +6,7 @@ interface Props {
   quizTitle: string
   creatorId: string
   creatorUsername: string
-  creatorScore: number
+  creatorScore?: number // Optional - if not provided, won't show score in modal
   totalQuestions: number
   timeTaken?: number // Optional, in seconds
 }
@@ -18,7 +18,7 @@ const loading = ref(false)
 const shareUrl = ref('')
 const shareCode = ref('')
 const copied = ref(false)
-const creatorPercentage = ref(Math.round((props.creatorScore / props.totalQuestions) * 100))
+const creatorPercentage = ref(props.creatorScore !== undefined ? Math.round((props.creatorScore / props.totalQuestions) * 100) : 0)
 
 const generateShareLink = async () => {
   loading.value = true
@@ -31,7 +31,7 @@ const generateShareLink = async () => {
         quizId: props.quizId,
         creatorId: props.creatorId,
         creatorUsername: props.creatorUsername,
-        creatorScore: props.creatorScore,
+        creatorScore: props.creatorScore || 0,
         totalQuestions: props.totalQuestions,
         timeTaken: props.timeTaken || 0
       })
@@ -108,8 +108,8 @@ const closeModal = () => {
 
             <!-- Content -->
             <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              <!-- Creator Score Banner -->
-              <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg p-4">
+              <!-- Creator Score Banner (only if score is provided) -->
+              <div v-if="creatorScore !== undefined" class="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg p-4">
                 <div class="flex items-center justify-between">
                   <div>
                     <p class="text-sm opacity-90 mb-1">Tu puntuación:</p>
