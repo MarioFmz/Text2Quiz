@@ -52,8 +52,20 @@ const router = createRouter({
 })
 
 // Navigation guard para rutas protegidas
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  // Esperar a que la autenticación se inicialice
+  if (authStore.loading) {
+    await new Promise<void>((resolve) => {
+      const unwatch = authStore.$subscribe(() => {
+        if (!authStore.loading) {
+          unwatch()
+          resolve()
+        }
+      })
+    })
+  }
 
   if (to.meta.requiresAuth && !authStore.user) {
     next('/login')

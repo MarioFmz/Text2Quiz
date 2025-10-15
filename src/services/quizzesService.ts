@@ -102,6 +102,29 @@ export class QuizzesService {
   }
 
   /**
+   * Obtiene el historial de intentos de un quiz (todos los learning_progress para ese quiz)
+   */
+  async getQuizAttempts(userId: string, quizId: string) {
+    const { data, error } = await supabase
+      .from('learning_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('quiz_id', quizId)
+      .order('completed_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
+
+  /**
+   * Verifica si el usuario ya completó un quiz
+   */
+  async hasCompletedQuiz(userId: string, quizId: string): Promise<boolean> {
+    const attempts = await this.getQuizAttempts(userId, quizId)
+    return attempts.length > 0
+  }
+
+  /**
    * Guarda el progreso de aprendizaje al completar un quiz
    */
   async saveProgress(

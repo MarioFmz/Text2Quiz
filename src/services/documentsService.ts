@@ -2,7 +2,6 @@ import { supabase } from './supabase'
 import type { Document } from '@/types'
 import { documentProcessor } from '@/agents/documentProcessor'
 import { contentAnalyzer } from '@/agents/contentAnalyzer'
-import { quizGenerator } from '@/agents/quizGenerator'
 
 export interface UploadResult {
   document: Document
@@ -144,7 +143,7 @@ export class DocumentsService {
   }
 
   /**
-   * Genera un quiz desde un documento
+   * Genera un quiz desde un documento usando el backend API
    */
   async generateQuizFromDocument(
     documentId: string,
@@ -154,55 +153,42 @@ export class DocumentsService {
     } = {}
   ) {
     try {
-      // 1. Obtener documento
-      const document = await this.getDocument(documentId)
-      if (!document || !document.extracted_text) {
-        throw new Error('Documento no encontrado o sin texto extraído')
-      }
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
-      // 2. Analizar contenido (opcional, para sugerencias)
-      const analysis = await contentAnalyzer.analyzeContent(document.extracted_text)
-
-      // 3. Generar quiz
-      const generatedQuiz = await quizGenerator.generateQuiz(document.extracted_text, {
-        numQuestions: options.numQuestions || analysis.suggestedQuestionCount,
-        difficulty: options.difficulty || analysis.difficulty
+      // Llamar al backend API para generar el quiz
+      const response = await fetch(`${apiUrl}/api/generate-quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          documentId,
+          numQuestions: options.numQuestions || 10,
+          difficulty: options.difficulty || 'medium'
+        })
       })
 
-      // 4. Guardar quiz en BD
-      const { data: quiz, error: quizError } = await supabase
-        .from('quizzes')
-        .insert({
-          document_id: documentId,
-          user_id: document.user_id,
-          title: generatedQuiz.title,
-          difficulty: generatedQuiz.difficulty,
-          total_questions: generatedQuiz.questions.length
-        })
-        .select()
-        .single()
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error generando quiz')
+      }
 
-      if (quizError) throw quizError
+      const result = await response.json()
 
-      // 5. Guardar preguntas
-      const questionsToInsert = generatedQuiz.questions.map((q, index) => ({
-        quiz_id: quiz.id,
-        question_text: q.question_text,
-        question_type: q.question_type,
-        correct_answer: q.correct_answer,
-        options: q.options,
-        explanation: q.explanation,
-        order: index + 1
-      }))
+      if (!result.success) {
+        throw new Error('Error generando quiz')
+      }
 
-      const { error: questionsError } = await supabase
-        .from('questions')
-        .insert(questionsToInsert)
+      // Analizar el contenido del documento para estadísticas (opcional)
+      const document = await this.getDocument(documentId)
+      let analysis = null
 
-      if (questionsError) throw questionsError
+      if (document?.extracted_text) {
+        analysis = await contentAnalyzer.analyzeContent(document.extracted_text)
+      }
 
       return {
-        quiz,
+        quiz: result.quiz,
         analysis
       }
     } catch (error) {

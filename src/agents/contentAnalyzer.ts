@@ -1,10 +1,3 @@
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-})
-
 export interface ContentAnalysis {
   mainTopics: string[]
   difficulty: 'easy' | 'medium' | 'hard'
@@ -24,32 +17,37 @@ export class ContentAnalyzer {
    */
   async analyzeContent(text: string): Promise<ContentAnalysis> {
     try {
-      const prompt = this.buildAnalysisPrompt(text)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `Eres un experto en análisis educativo y pedagogía.
-            Analiza el contenido proporcionado y determina sus características educativas.
-            Siempre responde con JSON válido.`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.3
+      // Usar el backend API para análisis
+      const response = await fetch(`${apiUrl}/api/analyze-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text })
       })
 
-      const content = completion.choices[0].message.content
-      if (!content) {
-        throw new Error('No se recibió respuesta de OpenAI')
+      if (!response.ok) {
+        throw new Error('Error al analizar contenido')
       }
 
-      return JSON.parse(content) as ContentAnalysis
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error('Error al analizar contenido')
+      }
+
+      // El backend devuelve un análisis básico, agregamos más detalles
+      const analysis = result.analysis
+      return {
+        mainTopics: ['Análisis pendiente'],
+        difficulty: analysis.difficulty,
+        suggestedQuestionCount: analysis.suggestedQuestionCount,
+        keyConceptsCount: analysis.keyConceptsCount,
+        readingLevel: this.estimateReadingLevel(analysis.wordCount, analysis.sentenceCount),
+        summary: `Documento de ${analysis.wordCount} palabras, nivel ${analysis.difficulty}`
+      }
     } catch (error) {
       console.error('Error analyzing content:', error)
       // Retornar análisis básico en caso de error

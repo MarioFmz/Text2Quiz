@@ -17,8 +17,10 @@ const questions = ref<Question[]>([])
 const currentQuestionIndex = ref(0)
 const userAnswers = ref<Record<string, string>>({})
 const showResults = ref(false)
+const showSummary = ref(true) // Mostrar resumen al inicio
 const loading = ref(true)
 const submitting = ref(false)
+const previousAttempts = ref<any[]>([])
 
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const progress = computed(() => ((currentQuestionIndex.value + 1) / questions.value.length) * 100)
@@ -29,6 +31,11 @@ onMounted(async () => {
     const data = await quizzesService.getQuizWithQuestions(quizId)
     quiz.value = data
     questions.value = data.questions
+
+    // Cargar intentos previos si el usuario está autenticado
+    if (user.value) {
+      previousAttempts.value = await quizzesService.getQuizAttempts(user.value.id, quizId)
+    }
   } catch (error) {
     console.error('Error loading quiz:', error)
   } finally {
@@ -110,51 +117,66 @@ const restartQuiz = () => {
   userAnswers.value = {}
   currentQuestionIndex.value = 0
   showResults.value = false
+  showSummary.value = true // Volver a mostrar el resumen
 }
 
 const goToDocuments = () => {
   router.push('/documents')
 }
+
+const startQuiz = () => {
+  showSummary.value = false
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 </script>
 
 <template>
   <AppLayout>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
       <div v-if="loading" class="text-center py-12">
         <p class="text-gray-600">Cargando quiz...</p>
       </div>
 
       <!-- Results View -->
-      <div v-else-if="showResults" class="space-y-6">
-        <h1 class="text-4xl font-bold mb-8">Resultados</h1>
+      <div v-else-if="showResults" class="space-y-4 sm:space-y-6">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-8">Resultados</h1>
 
         <div class="card text-center">
-          <div class="text-6xl mb-4">
+          <div class="text-4xl sm:text-6xl mb-4">
             {{ calculateResults().percentage >= 70 ? '🎉' : '📚' }}
           </div>
-          <h2 class="text-3xl font-bold mb-2">
+          <h2 class="text-2xl sm:text-3xl font-bold mb-2">
             {{ calculateResults().percentage }}%
           </h2>
-          <p class="text-gray-600 mb-8">
+          <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">
             {{ calculateResults().correct }} de {{ questions.length }} respuestas correctas
           </p>
 
-          <div class="grid grid-cols-2 gap-4 mb-8">
-            <div class="p-4 bg-green-50 rounded-lg">
-              <div class="text-2xl font-bold text-green-700">{{ calculateResults().correct }}</div>
-              <div class="text-sm text-green-600">Correctas</div>
+          <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div class="p-3 sm:p-4 bg-green-50 rounded-lg">
+              <div class="text-xl sm:text-2xl font-bold text-green-700">{{ calculateResults().correct }}</div>
+              <div class="text-xs sm:text-sm text-green-600">Correctas</div>
             </div>
-            <div class="p-4 bg-red-50 rounded-lg">
-              <div class="text-2xl font-bold text-red-700">{{ calculateResults().incorrect }}</div>
-              <div class="text-sm text-red-600">Incorrectas</div>
+            <div class="p-3 sm:p-4 bg-red-50 rounded-lg">
+              <div class="text-xl sm:text-2xl font-bold text-red-700">{{ calculateResults().incorrect }}</div>
+              <div class="text-xs sm:text-sm text-red-600">Incorrectas</div>
             </div>
           </div>
 
-          <div class="flex justify-center space-x-4">
-            <button @click="restartQuiz" class="btn btn-secondary">
+          <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+            <button @click="restartQuiz" class="btn btn-secondary w-full sm:w-auto">
               Reintentar
             </button>
-            <button @click="goToDocuments" class="btn btn-primary">
+            <button @click="goToDocuments" class="btn btn-primary w-full sm:w-auto">
               Ver documentos
             </button>
           </div>
@@ -179,6 +201,87 @@ const goToDocuments = () => {
                 <p v-if="question.explanation" class="text-sm text-gray-700 bg-gray-50 p-3 rounded">
                   {{ question.explanation }}
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary View -->
+      <div v-else-if="showSummary && quiz" class="space-y-4 sm:space-y-6">
+        <div class="text-center mb-6 sm:mb-8">
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 px-2">{{ quiz.title }}</h1>
+          <p class="text-sm sm:text-base text-gray-600">Preparación para el quiz</p>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center space-x-3 mb-4 sm:mb-6">
+            <span class="text-2xl sm:text-3xl">📚</span>
+            <h2 class="text-lg sm:text-xl md:text-2xl font-bold">Conceptos clave</h2>
+          </div>
+
+          <div class="prose max-w-none mb-6 sm:mb-8">
+            <p class="text-sm sm:text-base text-gray-700 whitespace-pre-line">{{ quiz.summary || 'Repasa los conceptos principales antes de comenzar el quiz.' }}</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-6 bg-gray-50 rounded-lg">
+            <div class="text-center">
+              <div class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{{ questions.length }}</div>
+              <div class="text-xs sm:text-sm text-gray-600">Preguntas</div>
+            </div>
+            <div class="text-center">
+              <div class="text-base sm:text-xl md:text-3xl font-bold text-gray-900">{{ quiz.difficulty === 'easy' ? 'Fácil' : quiz.difficulty === 'medium' ? 'Medio' : 'Difícil' }}</div>
+              <div class="text-xs sm:text-sm text-gray-600">Dificultad</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">~{{ Math.ceil(questions.length * 1.5) }} min</div>
+              <div class="text-xs sm:text-sm text-gray-600">Tiempo</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+            <button @click="goToDocuments" class="btn btn-secondary w-full sm:w-auto order-2 sm:order-1">
+              Volver
+            </button>
+            <button @click="startQuiz" class="btn btn-primary w-full sm:w-auto order-1 sm:order-2">
+              Comenzar quiz
+            </button>
+          </div>
+        </div>
+
+        <!-- Previous Attempts -->
+        <div v-if="previousAttempts.length > 0" class="card">
+          <div class="flex items-center space-x-3 mb-4">
+            <span class="text-xl sm:text-2xl">📊</span>
+            <h2 class="text-base sm:text-lg md:text-xl font-bold">Intentos anteriores</h2>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              v-for="(attempt, index) in previousAttempts"
+              :key="attempt.id"
+              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+            >
+              <div class="flex items-center space-x-4">
+                <div class="text-center">
+                  <div class="text-2xl font-bold" :class="attempt.score / attempt.total_questions >= 0.7 ? 'text-green-600' : 'text-orange-600'">
+                    {{ Math.round((attempt.score / attempt.total_questions) * 100) }}%
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ attempt.score }}/{{ attempt.total_questions }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm font-medium text-gray-900">
+                    Intento #{{ previousAttempts.length - index }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ formatDate(attempt.completed_at) }}
+                  </div>
+                </div>
+              </div>
+              <div class="text-2xl">
+                {{ attempt.score / attempt.total_questions >= 0.9 ? '🏆' : attempt.score / attempt.total_questions >= 0.7 ? '✅' : '📝' }}
               </div>
             </div>
           </div>
