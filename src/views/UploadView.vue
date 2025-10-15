@@ -13,7 +13,8 @@ const file = ref<File | null>(null)
 const uploading = ref(false)
 const processing = ref(false)
 const error = ref('')
-const currentStep = ref<'upload' | 'processing' | 'generating'>('upload')
+const currentStep = ref<'upload' | 'processing' | 'ocr' | 'generating'>('upload')
+const processingMessage = ref('')
 
 const handleDrop = (e: DragEvent) => {
   isDragging.value = false
@@ -57,15 +58,36 @@ const handleUpload = async () => {
     error.value = ''
     uploading.value = true
     currentStep.value = 'upload'
+    processingMessage.value = 'Subiendo archivo...'
+
+    // Escuchar mensajes de consola para actualizar el progreso
+    const originalLog = console.log
+    console.log = (...args) => {
+      const message = args.join(' ')
+      if (message.includes('OCR on page')) {
+        currentStep.value = 'ocr'
+        processingMessage.value = message
+      } else if (message.includes('Processing') && message.includes('pages with OCR')) {
+        currentStep.value = 'ocr'
+        processingMessage.value = 'Aplicando OCR (esto puede tardar unos minutos)...'
+      }
+      originalLog.apply(console, args)
+    }
 
     // 1. Subir y procesar documento
+    currentStep.value = 'processing'
+    processingMessage.value = 'Procesando documento...'
     const result = await documentsService.uploadDocument(file.value, user.value.id)
 
     // 2. Generar quiz
     currentStep.value = 'generating'
+    processingMessage.value = 'Generando quiz con IA...'
     processing.value = true
 
     const { quiz } = await documentsService.generateQuizFromDocument(result.document.id)
+
+    // Restaurar console.log
+    console.log = originalLog
 
     // 3. Navegar al quiz generado
     router.push(`/quiz/${quiz.id}`)
@@ -76,6 +98,7 @@ const handleUpload = async () => {
     uploading.value = false
     processing.value = false
     currentStep.value = 'upload'
+    processingMessage.value = ''
   }
 }
 </script>
@@ -94,13 +117,17 @@ const handleUpload = async () => {
       <!-- Processing status -->
       <div v-if="uploading || processing" class="mb-6 card">
         <div class="text-center">
-          <div class="text-4xl mb-4">⏳</div>
+          <div class="text-4xl mb-4 animate-pulse">
+            {{ currentStep === 'ocr' ? '🔍' : '⏳' }}
+          </div>
           <h3 class="text-xl font-semibold mb-2">
-            {{ currentStep === 'upload' ? 'Subiendo archivo...' :
-               currentStep === 'processing' ? 'Procesando documento...' :
-               'Generando quiz con IA...' }}
+            {{ processingMessage || 'Procesando...' }}
           </h3>
-          <p class="text-gray-600">Esto puede tomar un momento</p>
+          <p class="text-gray-600 text-sm">
+            {{ currentStep === 'ocr' ? 'El OCR puede tardar varios minutos dependiendo del número de páginas' :
+               currentStep === 'generating' ? 'Generando preguntas inteligentes...' :
+               'Por favor espera...' }}
+          </p>
         </div>
       </div>
 
