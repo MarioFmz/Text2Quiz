@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
+import QuizOptionsModal from '@/components/QuizOptionsModal.vue'
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
@@ -15,6 +16,8 @@ const processing = ref(false)
 const error = ref('')
 const currentStep = ref<'upload' | 'processing' | 'ocr' | 'generating'>('upload')
 const processingMessage = ref('')
+const uploadedDocumentId = ref<string | null>(null)
+const showQuizOptionsModal = ref(false)
 
 const handleDrop = (e: DragEvent) => {
   isDragging.value = false
@@ -79,27 +82,54 @@ const handleUpload = async () => {
     processingMessage.value = 'Procesando documento...'
     const result = await documentsService.uploadDocument(file.value, user.value.id)
 
-    // 2. Generar quiz
-    currentStep.value = 'generating'
-    processingMessage.value = 'Generando quiz con IA...'
-    processing.value = true
-
-    const { quiz } = await documentsService.generateQuizFromDocument(result.document.id)
-
     // Restaurar console.log
     console.log = originalLog
 
-    // 3. Navegar al quiz generado
-    router.push(`/quiz/${quiz.id}`)
+    // 2. Guardar el ID del documento y mostrar modal de opciones
+    uploadedDocumentId.value = result.document.id
+    uploading.value = false
+    showQuizOptionsModal.value = true
   } catch (e: any) {
     error.value = e.message || 'Error al procesar el documento'
     console.error('Upload error:', e)
-  } finally {
     uploading.value = false
     processing.value = false
     currentStep.value = 'upload'
     processingMessage.value = ''
   }
+}
+
+const generateQuizWithOptions = async (options: { numQuestions: number; difficulty: string }) => {
+  if (!uploadedDocumentId.value) return
+
+  try {
+    showQuizOptionsModal.value = false
+    processing.value = true
+    currentStep.value = 'generating'
+    processingMessage.value = 'Generando quiz con IA...'
+
+    const { quiz } = await documentsService.generateQuizFromDocument(
+      uploadedDocumentId.value,
+      options
+    )
+
+    // Navegar al quiz generado
+    router.push(`/quiz/${quiz.id}`)
+  } catch (e: any) {
+    error.value = e.message || 'Error al generar el quiz'
+    console.error('Quiz generation error:', e)
+  } finally {
+    processing.value = false
+    currentStep.value = 'upload'
+    processingMessage.value = ''
+  }
+}
+
+const cancelQuizGeneration = () => {
+  showQuizOptionsModal.value = false
+  uploadedDocumentId.value = null
+  file.value = null
+  router.push('/documents')
 }
 </script>
 
@@ -183,6 +213,13 @@ const handleUpload = async () => {
           </div>
         </div>
       </div>
+
+      <!-- Quiz Options Modal -->
+      <QuizOptionsModal
+        v-if="showQuizOptionsModal"
+        @generate="generateQuizWithOptions"
+        @cancel="cancelQuizGeneration"
+      />
     </div>
   </AppLayout>
 </template>

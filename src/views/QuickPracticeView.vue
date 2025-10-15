@@ -2,10 +2,12 @@
 import AppLayout from '@/components/AppLayout.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { useRoute } from 'vue-router'
 import { quizzesService } from '@/services/quizzesService'
 import type { Question } from '@/types'
 
 const { user } = useAuth()
+const route = useRoute()
 
 type PracticeMode = 'menu' | 'flashcards' | 'express' | 'daily'
 
@@ -25,6 +27,16 @@ const unknownCards = ref<string[]>([])
 
 onMounted(async () => {
   await loadUserStreak()
+
+  // Check if there's a mode parameter in the URL
+  const urlMode = route.query.mode as string
+  if (urlMode === 'flashcards') {
+    await startFlashCards()
+  } else if (urlMode === 'express') {
+    await startQuizExpress()
+  } else if (urlMode === 'daily') {
+    await startDailyChallenge()
+  }
 })
 
 const loadUserStreak = async () => {

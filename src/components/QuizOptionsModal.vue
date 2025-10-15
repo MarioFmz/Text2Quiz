@@ -8,18 +8,36 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  generate: [options: { numQuestions: number; difficulty: 'easy' | 'medium' | 'hard' }]
+  generate: [options: { numQuestions: number; difficulty: 'easy' | 'medium' | 'hard'; name: string }]
   cancel: []
   close: []
 }>()
 
+// Generar nombre por defecto con fecha y hora actual
+const getDefaultName = () => {
+  const now = new Date()
+  const day = now.getDate().toString().padStart(2, '0')
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+  const year = now.getFullYear()
+  const hours = now.getHours().toString().padStart(2, '0')
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  return `Quiz ${day}/${month}/${year} ${hours}:${minutes}`
+}
+
+const quizName = ref(getDefaultName())
 const numQuestions = ref(10)
 const difficulty = ref<'easy' | 'medium' | 'hard'>('medium')
 
 const handleGenerate = () => {
+  if (!quizName.value.trim()) {
+    alert('Por favor, ingresa un nombre para el quiz')
+    return
+  }
+
   emit('generate', {
     numQuestions: numQuestions.value,
-    difficulty: difficulty.value
+    difficulty: difficulty.value,
+    name: quizName.value
   })
   emit('close')
 }
@@ -54,6 +72,22 @@ const handleBackdropClick = (event: MouseEvent) => {
           >
             <!-- Title -->
             <h3 class="text-xl font-semibold mb-6">Opciones del Quiz</h3>
+
+            <!-- Quiz Name -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Nombre del quiz
+              </label>
+              <input
+                v-model="quizName"
+                type="text"
+                placeholder="Ej: Quiz de Matemáticas"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Por defecto: fecha y hora actual
+              </p>
+            </div>
 
             <!-- Number of questions -->
             <div class="mb-6">

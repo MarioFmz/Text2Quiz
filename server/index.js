@@ -68,13 +68,16 @@ app.post('/api/analyze-content', async (req, res) => {
 // Generate quiz endpoint
 app.post('/api/generate-quiz', async (req, res) => {
   try {
-    const { documentId, numQuestions = 10, difficulty = 'medium' } = req.body;
+    const { documentId, numQuestions = 10, difficulty = 'medium', name } = req.body;
 
     if (!documentId) {
       return res.status(400).json({ error: 'documentId is required' });
     }
 
     console.log(`Generating quiz for document ${documentId}...`);
+    if (name) {
+      console.log(`Custom quiz name: ${name}`);
+    }
 
     // Get document from database
     const { data: document, error: docError } = await supabase
@@ -133,7 +136,7 @@ app.post('/api/generate-quiz', async (req, res) => {
       .insert({
         document_id: documentId,
         user_id: document.user_id,
-        title: generatedQuiz.title,
+        title: name || generatedQuiz.title, // Usar nombre personalizado si está disponible
         difficulty: generatedQuiz.difficulty,
         total_questions: generatedQuiz.questions.length,
         summary: generatedQuiz.summary || 'Repasa los conceptos clave antes de comenzar el quiz.'

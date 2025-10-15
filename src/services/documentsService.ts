@@ -150,6 +150,7 @@ export class DocumentsService {
     options: {
       numQuestions?: number
       difficulty?: 'easy' | 'medium' | 'hard'
+      name?: string
     } = {}
   ) {
     try {
@@ -164,7 +165,8 @@ export class DocumentsService {
         body: JSON.stringify({
           documentId,
           numQuestions: options.numQuestions || 10,
-          difficulty: options.difficulty || 'medium'
+          difficulty: options.difficulty || 'medium',
+          name: options.name
         })
       })
 
