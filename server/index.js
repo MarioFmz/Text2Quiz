@@ -258,7 +258,7 @@ app.post('/api/challenges/create', async (req, res) => {
       hasLeaderboard = true
     } = req.body;
 
-    if (!quizId || !creatorId || creatorScore === undefined || !totalQuestions) {
+    if (!quizId || !creatorId || !totalQuestions) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
