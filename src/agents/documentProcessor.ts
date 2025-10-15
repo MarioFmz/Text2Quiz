@@ -55,7 +55,17 @@ export class DocumentProcessor {
       }
 
       const pagesText = await Promise.all(textPromises)
-      const fullText = pagesText.join('\n\n')
+      const fullText = pagesText.join('\n\n').trim()
+
+      console.log('PDF processed:', {
+        pages: pdf.numPages,
+        textLength: fullText.length,
+        firstChars: fullText.substring(0, 100)
+      })
+
+      if (!fullText || fullText.length < 10) {
+        throw new Error('El PDF no contiene texto extraíble o está escaneado. Intenta con un PDF que contenga texto seleccionable.')
+      }
 
       return {
         text: fullText,
@@ -65,7 +75,7 @@ export class DocumentProcessor {
       }
     } catch (error) {
       console.error('Error processing PDF:', error)
-      throw new Error('Error al procesar el PDF')
+      throw error instanceof Error ? error : new Error('Error al procesar el PDF')
     }
   }
 

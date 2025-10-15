@@ -48,7 +48,16 @@ export class DocumentsService {
         .getPublicUrl(uploadData.path)
 
       // 4. Procesar documento para extraer texto
+      console.log('Processing file:', file.name, file.type)
       const processed = await documentProcessor.processFile(file)
+      console.log('File processed successfully:', {
+        textLength: processed.text.length,
+        wordCount: processed.wordCount
+      })
+
+      if (!processed.text || processed.text.trim().length === 0) {
+        throw new Error('No se pudo extraer texto del documento')
+      }
 
       // 5. Crear registro en la base de datos
       const { data: document, error: dbError } = await supabase
@@ -64,7 +73,12 @@ export class DocumentsService {
         .select()
         .single()
 
-      if (dbError) throw dbError
+      if (dbError) {
+        console.error('Database error:', dbError)
+        throw dbError
+      }
+
+      console.log('Document saved to database:', document.id)
 
       return {
         document,
