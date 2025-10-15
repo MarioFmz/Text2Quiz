@@ -24,6 +24,7 @@ const username = ref('')
 const leaderboard = ref<any[]>([])
 const showLeaderboard = ref(false)
 const creatorAttempt = ref<any>(null)
+const quizStartTime = ref<number>(0)
 
 onMounted(async () => {
   await loadChallenge()
@@ -99,8 +100,10 @@ const submitQuiz = async () => {
       q => userAnswers.value[q.id] === q.correct_answer
     ).length
 
-    const startTime = Date.now()
-    const timeTaken = Math.floor((Date.now() - startTime) / 1000) // Simulated time
+    // Calcular tiempo tomado desde el inicio del quiz
+    const timeTaken = quizStartTime.value > 0
+      ? Math.floor((Date.now() - quizStartTime.value) / 1000)
+      : 0
 
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
     await fetch(`${apiUrl}/api/challenges/${challenge.value.id}/attempt`, {
@@ -146,6 +149,7 @@ const restartQuiz = () => {
 
 const startQuiz = () => {
   showSummary.value = false
+  quizStartTime.value = Date.now()
 }
 
 const toggleLeaderboard = () => {

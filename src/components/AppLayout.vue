@@ -49,10 +49,10 @@ const closeMobileMenu = () => {
               Documentos
             </router-link>
             <router-link
-              to="/practice"
+              to="/my-challenges"
               class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
             >
-              ⚡ Práctica
+              🏆 Mis Desafíos
             </router-link>
             <router-link
               to="/upload"
@@ -133,11 +133,11 @@ const closeMobileMenu = () => {
               Documentos
             </router-link>
             <router-link
-              to="/practice"
+              to="/my-challenges"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              ⚡ Práctica Rápida
+              🏆 Mis Desafíos
             </router-link>
             <router-link
               to="/upload"

@@ -347,6 +347,95 @@ app.post('/api/challenges/create', async (req, res) => {
   }
 });
 
+// Obtener todos los challenges del usuario
+app.get('/api/challenges/my-challenges', async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Obtener challenges del usuario con estadísticas
+    const { data: challenges, error: challengesError } = await supabase
+      .from('quiz_challenges')
+      .select(`
+        id,
+        quiz_id,
+        creator_id,
+        share_code,
+        share_slug,
+        is_active,
+        created_at,
+        quizzes (
+          title,
+          total_questions
+        )
+      `)
+      .eq('creator_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (challengesError) throw challengesError;
+
+    // Para cada challenge, obtener estadísticas
+    const challengesWithStats = await Promise.all(
+      (challenges || []).map(async (challenge) => {
+        // Obtener todos los intentos del challenge
+        const { data: attempts } = await supabase
+          .from('challenge_attempts')
+          .select('score, total_questions, user_id')
+          .eq('challenge_id', challenge.id)
+          .order('score', { ascending: false });
+
+        const totalAttempts = attempts?.length || 0;
+        const bestAttempt = attempts?.[0];
+        const bestScore = bestAttempt
+          ? Math.round((bestAttempt.score / bestAttempt.total_questions) * 100)
+          : 0;
+
+        // Encontrar el intento del creador y su ranking
+        const creatorAttempt = attempts?.find(a => a.user_id === userId);
+        const creatorPercentage = creatorAttempt
+          ? Math.round((creatorAttempt.score / creatorAttempt.total_questions) * 100)
+          : 0;
+
+        // Calcular ranking del creador
+        let creatorRank = null;
+        if (creatorAttempt && attempts) {
+          const sortedAttempts = [...attempts].sort((a, b) => {
+            const percentA = (a.score / a.total_questions) * 100;
+            const percentB = (b.score / b.total_questions) * 100;
+            return percentB - percentA;
+          });
+          creatorRank = sortedAttempts.findIndex(a => a.user_id === userId) + 1;
+        }
+
+        return {
+          id: challenge.id,
+          quiz_id: challenge.quiz_id,
+          quiz_title: challenge.quizzes?.title || 'Quiz sin título',
+          share_code: challenge.share_code,
+          share_slug: challenge.share_slug,
+          is_active: challenge.is_active,
+          created_at: challenge.created_at,
+          total_attempts: totalAttempts,
+          best_score: bestScore,
+          creator_percentage: creatorPercentage,
+          creator_rank: creatorRank
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      challenges: challengesWithStats
+    });
+  } catch (error) {
+    console.error('Error getting my challenges:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Obtener un challenge por código o slug
 app.get('/api/challenges/:identifier', async (req, res) => {
   try {
