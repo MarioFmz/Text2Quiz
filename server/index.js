@@ -369,7 +369,6 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
         creator_id,
         share_code,
         share_slug,
-        is_active,
         created_at,
         quizzes (
           title,
@@ -420,7 +419,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
           quiz_title: challenge.quizzes?.title || 'Quiz sin título',
           share_code: challenge.share_code,
           share_slug: challenge.share_slug,
-          is_active: challenge.is_active,
+          is_active: true, // All challenges are active by default
           created_at: challenge.created_at,
           total_attempts: totalAttempts,
           best_score: bestScore,

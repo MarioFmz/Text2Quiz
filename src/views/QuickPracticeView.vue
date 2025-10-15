@@ -426,13 +426,8 @@ const progress = computed(() => {
 
           <div class="space-y-3">
             <button
-              v-for="option in [
-                currentQuestion.option_a,
-                currentQuestion.option_b,
-                currentQuestion.option_c,
-                currentQuestion.option_d
-              ]"
-              :key="option"
+              v-for="(option, index) in currentQuestion.options"
+              :key="index"
               @click="selectAnswer(currentQuestion.id, option)"
               class="w-full text-left p-4 rounded-lg border-2 transition-all"
               :class="
