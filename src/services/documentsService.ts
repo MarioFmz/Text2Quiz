@@ -14,27 +14,43 @@ export interface UploadResult {
  */
 export class DocumentsService {
   /**
+   * Sanitiza el nombre del archivo removiendo caracteres especiales
+   */
+  private sanitizeFileName(fileName: string): string {
+    // Remover tildes y caracteres especiales
+    return fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remover tildes
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Reemplazar caracteres especiales con guión bajo
+      .replace(/_{2,}/g, '_') // Reemplazar múltiples guiones bajos con uno solo
+      .toLowerCase()
+  }
+
+  /**
    * Sube un archivo a Supabase Storage y crea el registro en la BD
    */
   async uploadDocument(file: File, userId: string): Promise<UploadResult> {
     try {
-      // 1. Subir archivo a Storage
-      const fileName = `${userId}/${Date.now()}_${file.name}`
+      // 1. Sanitizar nombre del archivo
+      const sanitizedFileName = this.sanitizeFileName(file.name)
+      const fileName = `${userId}/${Date.now()}_${sanitizedFileName}`
+
+      // 2. Subir archivo a Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file)
 
       if (uploadError) throw uploadError
 
-      // 2. Obtener URL pública
+      // 3. Obtener URL pública
       const { data: urlData } = supabase.storage
         .from('documents')
         .getPublicUrl(uploadData.path)
 
-      // 3. Procesar documento para extraer texto
+      // 4. Procesar documento para extraer texto
       const processed = await documentProcessor.processFile(file)
 
-      // 4. Crear registro en la base de datos
+      // 5. Crear registro en la base de datos
       const { data: document, error: dbError } = await supabase
         .from('documents')
         .insert({
