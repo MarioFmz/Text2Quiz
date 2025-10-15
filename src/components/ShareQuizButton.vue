@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import NotificationModal from './NotificationModal.vue'
 
 interface Props {
   quizId: string
@@ -19,6 +20,9 @@ const shareUrl = ref('')
 const shareCode = ref('')
 const copied = ref(false)
 const creatorPercentage = ref(props.creatorScore !== undefined ? Math.round((props.creatorScore / props.totalQuestions) * 100) : 0)
+
+const showError = ref(false)
+const errorMessage = ref('')
 
 const generateShareLink = async () => {
   loading.value = true
@@ -47,7 +51,8 @@ const generateShareLink = async () => {
     showModal.value = true
   } catch (error) {
     console.error('Error generating share link:', error)
-    alert('Error al generar el enlace de compartir')
+    errorMessage.value = 'No se pudo generar el enlace de compartir. Por favor, intenta de nuevo.'
+    showError.value = true
   } finally {
     loading.value = false
   }

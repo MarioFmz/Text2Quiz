@@ -390,7 +390,7 @@ const getRankEmoji = (rank: number) => {
       </div>
 
       <!-- Quiz View -->
-      <div v-else-if="!showResults" class="space-y-4 sm:space-y-6">
+      <div v-else-if="!showResults && quiz" class="space-y-4 sm:space-y-6">
         <div class="flex items-center justify-between mb-4">
           <h1 class="text-xl sm:text-2xl font-bold">{{ quiz.title }}</h1>
           <span class="text-sm text-gray-600">
