@@ -404,6 +404,33 @@ app.post('/api/challenges/create', async (req, res) => {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
+    // ⭐ VERIFICAR SI YA EXISTE UN CHALLENGE ACTIVO PARA ESTE QUIZ
+    const { data: existingChallenge, error: existingError } = await supabase
+      .from('quiz_challenges')
+      .select('id, share_code, share_slug')
+      .eq('quiz_id', quizId)
+      .eq('creator_id', creatorId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // Si ya existe un challenge activo, devolverlo
+    if (existingChallenge) {
+      console.log(`Challenge already exists for quiz ${quizId}: ${existingChallenge.share_code}`);
+
+      return res.json({
+        success: true,
+        challenge: {
+          id: existingChallenge.id,
+          shareCode: existingChallenge.share_code,
+          shareSlug: existingChallenge.share_slug,
+          shareUrl: `/challenge/${existingChallenge.share_slug}`
+        },
+        share_code: existingChallenge.share_code,
+        share_slug: existingChallenge.share_slug,
+        isExisting: true // Indicador de que se reutilizó un challenge existente
+      });
+    }
+
     // Generar código y slug únicos
     let shareCode = generateShareCode();
     let shareSlug = generateShareSlug(quiz.title);
