@@ -68,7 +68,7 @@ app.post('/api/analyze-content', async (req, res) => {
 // Generate quiz endpoint
 app.post('/api/generate-quiz', async (req, res) => {
   try {
-    const { documentId, numQuestions = 10, difficulty = 'medium', name } = req.body;
+    const { documentId, numQuestions = 10, difficulty = 'medium', name, questionType = 'mixed' } = req.body;
 
     if (!documentId) {
       return res.status(400).json({ error: 'documentId is required' });
@@ -78,6 +78,7 @@ app.post('/api/generate-quiz', async (req, res) => {
     if (name) {
       console.log(`Custom quiz name: ${name}`);
     }
+    console.log(`Question type: ${questionType}`);
 
     // Get document from database
     const { data: document, error: docError } = await supabase
@@ -98,7 +99,7 @@ app.post('/api/generate-quiz', async (req, res) => {
     console.log(`Text length: ${document.extracted_text.length} characters`);
 
     // Generate quiz with OpenAI
-    const prompt = buildQuizPrompt(document.extracted_text, numQuestions, difficulty);
+    const prompt = buildQuizPrompt(document.extracted_text, numQuestions, difficulty, questionType);
 
     console.log('Calling OpenAI API...');
 
@@ -178,7 +179,7 @@ app.post('/api/generate-quiz', async (req, res) => {
 // Generate quiz from multiple documents
 app.post('/api/quizzes/create-from-multiple', async (req, res) => {
   try {
-    const { userId, title, documentIds, numQuestions = 10, difficulty = 'medium' } = req.body;
+    const { userId, title, documentIds, numQuestions = 10, difficulty = 'medium', questionType = 'mixed' } = req.body;
 
     if (!userId || !title || !documentIds || documentIds.length === 0) {
       return res.status(400).json({ error: 'userId, title, and documentIds are required' });
@@ -216,9 +217,10 @@ app.post('/api/quizzes/create-from-multiple', async (req, res) => {
     console.log(`Total combined text length: ${combinedText.length} characters`);
 
     // Generate quiz with OpenAI
-    const prompt = buildQuizPrompt(combinedText, numQuestions, difficulty);
+    const prompt = buildQuizPrompt(combinedText, numQuestions, difficulty, questionType);
 
     console.log('Calling OpenAI API...');
+    console.log(`Question type: ${questionType}`);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -302,28 +304,35 @@ app.post('/api/quizzes/create-from-multiple', async (req, res) => {
   }
 });
 
-function buildQuizPrompt(text, numQuestions, difficulty) {
-  return `
-Analiza el siguiente texto y genera un quiz educativo de alta calidad en español.
+function buildQuizPrompt(text, numQuestions, difficulty, questionType = 'mixed') {
+  // Determinar las instrucciones según el tipo de pregunta
+  let questionTypeInstructions = '';
+  let questionTypeExamples = '';
 
-TEXTO:
-${text.substring(0, 6000)} ${text.length > 6000 ? '...' : ''}
-
-INSTRUCCIONES:
-1. Genera un resumen conciso con los conceptos más importantes (3-5 puntos clave) para que el usuario repase antes del quiz
-2. Genera exactamente ${numQuestions} preguntas de nivel ${difficulty}
-3. Mezcla preguntas de múltiple opción (4 opciones) y verdadero/falso (2 opciones)
-4. Las preguntas deben evaluar conceptos clave, no detalles triviales
-5. Proporciona explicaciones claras para cada respuesta correcta
-6. Para múltiple opción, las opciones incorrectas deben ser plausibles pero claramente incorrectas
-7. Genera un título descriptivo para el quiz basado en el contenido
-
-FORMATO DE RESPUESTA (JSON):
-{
-  "title": "Título del Quiz",
-  "difficulty": "${difficulty}",
-  "summary": "• Concepto clave 1: Breve explicación del concepto principal\\n• Concepto clave 2: Breve explicación del segundo concepto\\n• Concepto clave 3: Breve explicación del tercer concepto",
-  "questions": [
+  if (questionType === 'multiple_choice') {
+    questionTypeInstructions = '3. Genera SOLO preguntas de múltiple opción con 4 opciones cada una';
+    questionTypeExamples = `
+    {
+      "question_text": "Pregunta aquí",
+      "question_type": "multiple_choice",
+      "correct_answer": "Respuesta correcta",
+      "options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],
+      "explanation": "Explicación de por qué es correcta"
+    }`;
+  } else if (questionType === 'true_false') {
+    questionTypeInstructions = '3. Genera SOLO preguntas de verdadero/falso con 2 opciones cada una';
+    questionTypeExamples = `
+    {
+      "question_text": "Pregunta verdadero/falso",
+      "question_type": "true_false",
+      "correct_answer": "Verdadero",
+      "options": ["Verdadero", "Falso"],
+      "explanation": "Explicación"
+    }`;
+  } else {
+    // mixed
+    questionTypeInstructions = '3. Mezcla preguntas de múltiple opción (4 opciones) y verdadero/falso (2 opciones)';
+    questionTypeExamples = `
     {
       "question_text": "Pregunta aquí",
       "question_type": "multiple_choice",
@@ -337,7 +346,30 @@ FORMATO DE RESPUESTA (JSON):
       "correct_answer": "Verdadero",
       "options": ["Verdadero", "Falso"],
       "explanation": "Explicación"
-    }
+    }`;
+  }
+
+  return `
+Analiza el siguiente texto y genera un quiz educativo de alta calidad en español.
+
+TEXTO:
+${text.substring(0, 6000)} ${text.length > 6000 ? '...' : ''}
+
+INSTRUCCIONES:
+1. Genera un resumen conciso con los conceptos más importantes (3-5 puntos clave) para que el usuario repase antes del quiz
+2. Genera exactamente ${numQuestions} preguntas de nivel ${difficulty}
+${questionTypeInstructions}
+4. Las preguntas deben evaluar conceptos clave, no detalles triviales
+5. Proporciona explicaciones claras para cada respuesta correcta
+6. Para múltiple opción, las opciones incorrectas deben ser plausibles pero claramente incorrectas
+7. Genera un título descriptivo para el quiz basado en el contenido
+
+FORMATO DE RESPUESTA (JSON):
+{
+  "title": "Título del Quiz",
+  "difficulty": "${difficulty}",
+  "summary": "• Concepto clave 1: Breve explicación del concepto principal\\n• Concepto clave 2: Breve explicación del segundo concepto\\n• Concepto clave 3: Breve explicación del tercer concepto",
+  "questions": [${questionTypeExamples}
   ]
 }
 

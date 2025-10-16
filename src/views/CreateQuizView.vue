@@ -17,6 +17,7 @@ const selectedDocumentIds = ref<string[]>([])
 const newFiles = ref<File[]>([])
 const difficulty = ref<'easy' | 'medium' | 'hard'>('medium')
 const numQuestions = ref(10)
+const questionType = ref<'mixed' | 'multiple_choice' | 'true_false'>('mixed')
 
 // UI state
 const activeTab = ref<'upload' | 'library'>('upload')
@@ -107,7 +108,8 @@ const generateQuiz = async () => {
         title: quizTitle.value,
         documentIds: allDocumentIds,
         numQuestions: numQuestions.value,
-        difficulty: difficulty.value
+        difficulty: difficulty.value,
+        questionType: questionType.value
       })
     })
 
@@ -311,36 +313,92 @@ const generateQuiz = async () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                Dificultad
-              </label>
-              <select
-                v-model="difficulty"
-                class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
-              >
-                <option value="easy">😊 Fácil</option>
-                <option value="medium">🎯 Medio</option>
-                <option value="hard">🔥 Difícil</option>
-              </select>
+          <div class="space-y-4 sm:space-y-6">
+            <!-- Primera fila -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Dificultad
+                </label>
+                <select
+                  v-model="difficulty"
+                  class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+                >
+                  <option value="easy">😊 Fácil</option>
+                  <option value="medium">🎯 Medio</option>
+                  <option value="hard">🔥 Difícil</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Preguntas ({{ numQuestions }})
+                </label>
+                <input
+                  v-model.number="numQuestions"
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="5"
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                />
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>5</span>
+                  <span>50</span>
+                </div>
+              </div>
             </div>
 
+            <!-- Segunda fila - Tipo de preguntas -->
             <div>
               <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                Preguntas ({{ numQuestions }})
+                Tipo de preguntas
               </label>
-              <input
-                v-model.number="numQuestions"
-                type="range"
-                min="5"
-                max="50"
-                step="5"
-                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-              />
-              <div class="flex justify-between text-xs text-gray-500 mt-1">
-                <span>5</span>
-                <span>50</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  @click="questionType = 'mixed'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="questionType === 'mixed'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">🎲</span>
+                    <span class="font-semibold text-sm">Mixto</span>
+                  </div>
+                  <p class="text-xs text-gray-600">4 opciones + V/F</p>
+                </button>
+
+                <button
+                  type="button"
+                  @click="questionType = 'multiple_choice'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="questionType === 'multiple_choice'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">🔤</span>
+                    <span class="font-semibold text-sm">Múltiple</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Solo 4 opciones</p>
+                </button>
+
+                <button
+                  type="button"
+                  @click="questionType = 'true_false'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="questionType === 'true_false'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">✓✗</span>
+                    <span class="font-semibold text-sm">V/F</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Solo verdadero/falso</p>
+                </button>
               </div>
             </div>
           </div>
