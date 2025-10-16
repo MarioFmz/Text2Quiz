@@ -22,7 +22,9 @@
       "Read(//Users/mario/Desktop/**)",
       "Bash(cat:*)",
       "Bash(git revert:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

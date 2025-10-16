@@ -549,7 +549,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
     }
 
     // Obtener challenges del usuario con estadísticas
-    const { data: challenges, error: challengesError } = await supabase
+    const { data: challenges, error: challengesError} = await supabase
       .from('quiz_challenges')
       .select(`
         id,
@@ -559,7 +559,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
         share_slug,
         created_at,
         is_anonymous,
-        quizzes (
+        quizzes!quiz_challenges_quiz_id_fkey (
           title,
           total_questions
         )
@@ -633,7 +633,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
           creator_id,
           share_slug,
           created_at,
-          quizzes (
+          quizzes!quiz_challenges_quiz_id_fkey (
             title
           )
         )
@@ -705,12 +705,12 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
   }
 });
 
-// Obtener un challenge por código o slug
+// Obtener un challenge por código, slug o ID
 app.get('/api/challenges/:identifier', async (req, res) => {
   try {
     const { identifier } = req.params;
 
-    // Buscar por código o slug
+    // Buscar por ID, código o slug
     const { data: challenge, error: challengeError } = await supabase
       .from('quiz_challenges')
       .select(`
@@ -724,7 +724,7 @@ app.get('/api/challenges/:identifier', async (req, res) => {
           document_id
         )
       `)
-      .or(`share_code.eq.${identifier},share_slug.eq.${identifier}`)
+      .or(`id.eq.${identifier},share_code.eq.${identifier},share_slug.eq.${identifier}`)
       .single();
 
     if (challengeError || !challenge) {
@@ -873,6 +873,817 @@ app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
     });
   } catch (error) {
     console.error('Error saving attempt:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Save challenge progress (auto-save functionality)
+app.post('/api/challenges/:challengeId/save-progress', async (req, res) => {
+  try {
+    const { challengeId } = req.params;
+    const { userId, sessionId, answers, currentQuestionIndex } = req.body;
+
+    if (!challengeId || (!userId && !sessionId)) {
+      return res.status(400).json({ error: 'challengeId and userId/sessionId are required' });
+    }
+
+    if (answers === undefined || currentQuestionIndex === undefined) {
+      return res.status(400).json({ error: 'answers and currentQuestionIndex are required' });
+    }
+
+    // Build the upsert query
+    let query = {
+      challenge_id: challengeId,
+      answers: answers || {},
+      current_question_index: currentQuestionIndex,
+      completed: false
+    };
+
+    if (userId) {
+      query.user_id = userId;
+    } else {
+      query.session_id = sessionId;
+    }
+
+    // Check if progress already exists
+    let existingProgress;
+    if (userId) {
+      const { data } = await supabase
+        .from('challenge_progress')
+        .select('id')
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId)
+        .eq('completed', false)
+        .maybeSingle();
+      existingProgress = data;
+    } else {
+      const { data } = await supabase
+        .from('challenge_progress')
+        .select('id')
+        .eq('challenge_id', challengeId)
+        .eq('session_id', sessionId)
+        .eq('completed', false)
+        .maybeSingle();
+      existingProgress = data;
+    }
+
+    let savedProgress;
+    if (existingProgress) {
+      // Update existing progress
+      const { data, error } = await supabase
+        .from('challenge_progress')
+        .update({
+          answers: answers || {},
+          current_question_index: currentQuestionIndex
+        })
+        .eq('id', existingProgress.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      savedProgress = data;
+    } else {
+      // Insert new progress
+      const { data, error } = await supabase
+        .from('challenge_progress')
+        .insert(query)
+        .select()
+        .single();
+
+      if (error) throw error;
+      savedProgress = data;
+    }
+
+    console.log(`Progress saved for challenge ${challengeId}: ${Object.keys(answers || {}).length} answers, question ${currentQuestionIndex}`);
+
+    res.json({
+      success: true,
+      progress: savedProgress,
+      message: 'Progress saved successfully'
+    });
+  } catch (error) {
+    console.error('Error saving challenge progress:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get saved challenge progress
+app.get('/api/challenges/:challengeId/get-progress', async (req, res) => {
+  try {
+    const { challengeId } = req.params;
+    const { userId, sessionId } = req.query;
+
+    if (!challengeId || (!userId && !sessionId)) {
+      return res.status(400).json({ error: 'challengeId and userId/sessionId are required' });
+    }
+
+    // Query progress
+    let query = supabase
+      .from('challenge_progress')
+      .select('*')
+      .eq('challenge_id', challengeId)
+      .eq('completed', false);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    } else {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data: progress, error } = await query.maybeSingle();
+
+    if (error) throw error;
+
+    if (progress) {
+      console.log(`Progress retrieved for challenge ${challengeId}: ${Object.keys(progress.answers || {}).length} answers`);
+    }
+
+    res.json({
+      success: true,
+      progress: progress || null
+    });
+  } catch (error) {
+    console.error('Error getting challenge progress:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete saved challenge progress
+app.delete('/api/challenges/:challengeId/delete-progress', async (req, res) => {
+  try {
+    const { challengeId } = req.params;
+    const { userId, sessionId } = req.body;
+
+    if (!challengeId || (!userId && !sessionId)) {
+      return res.status(400).json({ error: 'challengeId and userId/sessionId are required' });
+    }
+
+    // Build delete query
+    let query = supabase
+      .from('challenge_progress')
+      .delete()
+      .eq('challenge_id', challengeId)
+      .eq('completed', false);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    } else {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { error } = await query;
+
+    if (error) throw error;
+
+    console.log(`Progress deleted for challenge ${challengeId}`);
+
+    res.json({
+      success: true,
+      message: 'Progress deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting challenge progress:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// PUBLIC QUIZZES & DISCOVERY ENDPOINTS
+// ============================================
+
+// Get all quiz categories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const { data: categories, error } = await supabase
+      .from('quiz_categories')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      categories: categories || []
+    });
+  } catch (error) {
+    console.error('Error getting categories:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List public quizzes with filters and search
+app.get('/api/public-quizzes', async (req, res) => {
+  try {
+    const {
+      category,
+      difficulty,
+      search,
+      sortBy = 'recent',
+      page = 1,
+      limit = 12,
+      userId
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Base query
+    let query = supabase
+      .from('quizzes')
+      .select(`
+        id,
+        title,
+        difficulty,
+        total_questions,
+        tags,
+        source,
+        is_verified,
+        views_count,
+        likes_count,
+        generated_at,
+        category_id,
+        global_challenge_id,
+        user_id,
+        quiz_categories (
+          id,
+          name,
+          slug,
+          icon
+        )
+      `, { count: 'exact' })
+      .eq('visibility', 'public');
+
+    // Apply filters
+    if (category) {
+      query = query.eq('category_id', category);
+    }
+
+    if (difficulty) {
+      query = query.eq('difficulty', difficulty);
+    }
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,tags.cs.{${search}}`);
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'popular':
+        query = query.order('views_count', { ascending: false });
+        break;
+      case 'likes':
+        query = query.order('likes_count', { ascending: false });
+        break;
+      case 'completed':
+        // For completed, we'll sort after getting participants count
+        query = query.order('generated_at', { ascending: false });
+        break;
+      case 'recent':
+      default:
+        query = query.order('generated_at', { ascending: false });
+        break;
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + parseInt(limit) - 1);
+
+    const { data: quizzes, error, count } = await query;
+
+    if (error) throw error;
+
+    // If user is logged in, check which quizzes they've liked
+    let likedQuizIds = new Set();
+    if (userId) {
+      const { data: likes } = await supabase
+        .from('quiz_likes')
+        .select('quiz_id')
+        .eq('user_id', userId);
+
+      likedQuizIds = new Set(likes?.map(l => l.quiz_id) || []);
+    }
+
+    // Get participants count and creator info for each quiz
+    let quizzesWithStats = await Promise.all(
+      (quizzes || []).map(async (quiz) => {
+        let participants_count = 0;
+        let creator = null;
+
+        if (quiz.global_challenge_id) {
+          const { count } = await supabase
+            .from('challenge_attempts')
+            .select('id', { count: 'exact', head: true })
+            .eq('challenge_id', quiz.global_challenge_id);
+
+          participants_count = count || 0;
+        }
+
+        // Get creator info only if user_id is not null
+        if (quiz.user_id) {
+          const { data: userProfile } = await supabase
+            .from('user_profiles')
+            .select('display_name, avatar_url')
+            .eq('user_id', quiz.user_id)
+            .single();
+
+          creator = userProfile;
+        }
+
+        return {
+          ...quiz,
+          category: quiz.quiz_categories,
+          creator,
+          is_liked: likedQuizIds.has(quiz.id),
+          participants_count
+        };
+      })
+    );
+
+    // If sorting by completed, sort by participants_count
+    if (sortBy === 'completed') {
+      quizzesWithStats.sort((a, b) => b.participants_count - a.participants_count);
+    }
+
+    res.json({
+      success: true,
+      quizzes: quizzesWithStats,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        totalPages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error getting public quizzes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific public quiz with full details
+app.get('/api/quizzes/:quizId/public', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.query;
+
+    // Get quiz with full details
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select(`
+        *,
+        quiz_categories (
+          id,
+          name,
+          slug,
+          icon,
+          description
+        )
+      `)
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Check if quiz is public or if user owns it
+    if (quiz.visibility !== 'public' && quiz.user_id !== userId) {
+      return res.status(403).json({ error: 'Quiz is not public' });
+    }
+
+    // Get creator info only if user_id is not null
+    let creator = null;
+    if (quiz.user_id) {
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('display_name, avatar_url, bio')
+        .eq('user_id', quiz.user_id)
+        .maybeSingle();
+
+      creator = userProfile;
+    }
+
+    // Get questions
+    const { data: questions } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('order');
+
+    // Check if user has liked this quiz
+    let is_liked = false;
+    if (userId) {
+      const { data: like } = await supabase
+        .from('quiz_likes')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('quiz_id', quizId)
+        .maybeSingle();
+
+      is_liked = !!like;
+    }
+
+    // Get participants count from global challenge
+    let participants_count = 0;
+    if (quiz.global_challenge_id) {
+      const { count } = await supabase
+        .from('challenge_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('challenge_id', quiz.global_challenge_id);
+
+      participants_count = count || 0;
+    }
+
+    // Increment view count
+    await supabase
+      .from('quizzes')
+      .update({ views_count: quiz.views_count + 1 })
+      .eq('id', quizId);
+
+    res.json({
+      success: true,
+      quiz: {
+        ...quiz,
+        category: quiz.quiz_categories,
+        creator,
+        is_liked,
+        participants_count
+      },
+      questions: questions || []
+    });
+  } catch (error) {
+    console.error('Error getting public quiz:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Like/unlike a quiz
+app.post('/api/quizzes/:quizId/like', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Check if already liked
+    const { data: existingLike } = await supabase
+      .from('quiz_likes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('quiz_id', quizId)
+      .maybeSingle();
+
+    if (existingLike) {
+      // Unlike: delete the like
+      const { error: deleteError } = await supabase
+        .from('quiz_likes')
+        .delete()
+        .eq('id', existingLike.id);
+
+      if (deleteError) throw deleteError;
+
+      res.json({
+        success: true,
+        liked: false,
+        message: 'Quiz unliked'
+      });
+    } else {
+      // Like: insert new like
+      const { error: insertError } = await supabase
+        .from('quiz_likes')
+        .insert({
+          user_id: userId,
+          quiz_id: quizId
+        });
+
+      if (insertError) throw insertError;
+
+      res.json({
+        success: true,
+        liked: true,
+        message: 'Quiz liked'
+      });
+    }
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Report a quiz
+app.post('/api/quizzes/:quizId/report', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId, reason, description } = req.body;
+
+    if (!userId || !reason) {
+      return res.status(400).json({ error: 'userId and reason are required' });
+    }
+
+    const validReasons = ['inappropriate', 'incorrect', 'duplicate', 'spam', 'other'];
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({ error: 'Invalid reason' });
+    }
+
+    // Create report
+    const { error } = await supabase
+      .from('quiz_reports')
+      .insert({
+        quiz_id: quizId,
+        reporter_id: userId,
+        reason,
+        description: description || null
+      });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Report submitted successfully'
+    });
+  } catch (error) {
+    console.error('Error reporting quiz:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update quiz visibility and metadata
+app.put('/api/quizzes/:quizId/visibility', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId, visibility, category_id, tags, source } = req.body;
+
+    if (!userId || !visibility) {
+      return res.status(400).json({ error: 'userId and visibility are required' });
+    }
+
+    // Verify ownership
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('user_id, visibility')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    if (quiz.user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Update quiz
+    const updateData = {
+      visibility,
+      ...(category_id !== undefined && { category_id }),
+      ...(tags !== undefined && { tags }),
+      ...(source !== undefined && { source })
+    };
+
+    const { data: updatedQuiz, error: updateError } = await supabase
+      .from('quizzes')
+      .update(updateData)
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Note: The trigger will automatically create a global challenge if visibility is set to 'public'
+
+    res.json({
+      success: true,
+      quiz: updatedQuiz,
+      message: visibility === 'public' ? 'Quiz is now public and discoverable' : 'Quiz visibility updated'
+    });
+  } catch (error) {
+    console.error('Error updating quiz visibility:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a quiz
+app.delete('/api/quizzes/:quizId', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Verify ownership
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('user_id, title')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    if (quiz.user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this quiz' });
+    }
+
+    // Delete quiz (cascading deletes will handle related records)
+    const { error: deleteError } = await supabase
+      .from('quizzes')
+      .delete()
+      .eq('id', quizId);
+
+    if (deleteError) throw deleteError;
+
+    console.log(`Quiz deleted: ${quiz.title} (${quizId}) by user ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Quiz deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting quiz:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Copy a public quiz to user's account
+app.post('/api/quizzes/:quizId/copy', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Get the original quiz
+    const { data: originalQuiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !originalQuiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Check if quiz is public
+    if (originalQuiz.visibility !== 'public') {
+      return res.status(403).json({ error: 'Quiz is not public' });
+    }
+
+    // Create a copy for the user
+    const { data: copiedQuiz, error: copyError } = await supabase
+      .from('quizzes')
+      .insert({
+        user_id: userId,
+        title: `${originalQuiz.title} (Copia)`,
+        difficulty: originalQuiz.difficulty,
+        total_questions: originalQuiz.total_questions,
+        summary: originalQuiz.summary,
+        visibility: 'private', // Copied quizzes are private by default
+        category_id: originalQuiz.category_id,
+        tags: originalQuiz.tags,
+        source: originalQuiz.source
+      })
+      .select()
+      .single();
+
+    if (copyError) throw copyError;
+
+    // Copy all questions
+    console.log(`Fetching questions for quiz ${quizId}...`);
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('quiz_id', quizId);
+
+    if (questionsError) {
+      console.error('Error fetching questions:', questionsError);
+      throw questionsError;
+    }
+
+    console.log(`Found ${questions?.length || 0} questions to copy`);
+
+    if (questions && questions.length > 0) {
+      const copiedQuestions = questions.map(q => ({
+        quiz_id: copiedQuiz.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        correct_answer: q.correct_answer,
+        options: q.options,
+        explanation: q.explanation,
+        order: q.order
+      }));
+
+      console.log(`Inserting ${copiedQuestions.length} questions into new quiz...`);
+      const { error: insertQuestionsError } = await supabase
+        .from('questions')
+        .insert(copiedQuestions);
+
+      if (insertQuestionsError) {
+        console.error('Error inserting questions:', insertQuestionsError);
+        throw insertQuestionsError;
+      }
+
+      console.log(`Successfully copied ${copiedQuestions.length} questions`);
+    } else {
+      console.log('No questions found in original quiz');
+    }
+
+    console.log(`Quiz ${quizId} copied to user ${userId} as ${copiedQuiz.id}`);
+
+    res.json({
+      success: true,
+      quiz: copiedQuiz,
+      message: 'Quiz copiado exitosamente a tus quizzes'
+    });
+  } catch (error) {
+    console.error('Error copying quiz:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get or create global challenge for a public quiz
+app.post('/api/quizzes/:quizId/get-or-create-challenge', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Get the quiz
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('id, title, global_challenge_id, visibility, total_questions')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Check if quiz is public
+    if (quiz.visibility !== 'public') {
+      return res.status(403).json({ error: 'Quiz is not public' });
+    }
+
+    // If global challenge already exists, return it
+    if (quiz.global_challenge_id) {
+      const { data: existingChallenge, error: challengeError } = await supabase
+        .from('quiz_challenges')
+        .select('id, share_code, share_slug')
+        .eq('id', quiz.global_challenge_id)
+        .single();
+
+      if (!challengeError && existingChallenge) {
+        console.log(`Using existing global challenge ${existingChallenge.id} for quiz ${quizId}`);
+        return res.json({
+          success: true,
+          challenge: existingChallenge,
+          message: 'Uniéndote al desafío global'
+        });
+      }
+    }
+
+    // Create global challenge
+    const shareCode = generateShareCode();
+    const shareSlug = generateShareSlug(quiz.title);
+
+    const { data: newChallenge, error: createError } = await supabase
+      .from('quiz_challenges')
+      .insert({
+        quiz_id: quizId,
+        creator_id: quiz.user_id || userId, // Use quiz creator or current user
+        share_code: shareCode,
+        share_slug: shareSlug,
+        show_creator_score: false, // No creator score for global challenges
+        has_leaderboard: true,
+        is_anonymous: false
+      })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+
+    // Update quiz with global_challenge_id
+    await supabase
+      .from('quizzes')
+      .update({ global_challenge_id: newChallenge.id })
+      .eq('id', quizId);
+
+    console.log(`Created global challenge ${newChallenge.id} for quiz ${quizId}`);
+
+    res.json({
+      success: true,
+      challenge: newChallenge,
+      message: 'Desafío global creado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error getting/creating global challenge:', error);
     res.status(500).json({ error: error.message });
   }
 });

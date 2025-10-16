@@ -66,6 +66,13 @@ const closeMobileMenu = () => {
               🏆 Desafíos
             </router-link>
             <router-link
+              to="/public-quizzes"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              🌍 Explorar
+            </router-link>
+            <router-link
               to="/documents"
               class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
               active-class="bg-gray-100 text-gray-900 font-semibold"
@@ -94,13 +101,13 @@ const closeMobileMenu = () => {
           <nav v-else class="hidden md:flex items-center space-x-4">
             <router-link
               to="/login"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+              class="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium"
             >
               Iniciar sesión
             </router-link>
             <router-link
               to="/register"
-              class="btn btn-primary text-sm"
+              class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-all text-sm font-medium shadow-md hover:shadow-lg"
             >
               Registrarse
             </router-link>
@@ -120,25 +127,25 @@ const closeMobileMenu = () => {
             </svg>
           </button>
 
-          <nav v-else class="md:hidden flex items-center space-x-2">
-            <router-link
-              to="/login"
-              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Entrar
-            </router-link>
-            <router-link
-              to="/register"
-              class="btn btn-primary text-sm px-3 py-1.5"
-            >
-              Registro
-            </router-link>
-          </nav>
+          <!-- Mobile menu button for non-authenticated -->
+          <button
+            v-else
+            @click="mobileMenuOpen = !mobileMenuOpen"
+            class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <!-- Mobile menu -->
       <Transition name="slide">
+        <!-- Authenticated user mobile menu -->
         <div v-if="user && mobileMenuOpen" class="md:hidden border-t border-gray-200 bg-white shadow-lg">
           <div class="px-4 py-3 space-y-1">
             <!-- Primary CTA -->
@@ -176,6 +183,14 @@ const closeMobileMenu = () => {
               🏆 Mis Desafíos
             </router-link>
             <router-link
+              to="/public-quizzes"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              🌍 Explorar Quizzes
+            </router-link>
+            <router-link
               to="/documents"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
@@ -201,6 +216,26 @@ const closeMobileMenu = () => {
             >
               Salir
             </button>
+          </div>
+        </div>
+
+        <!-- Non-authenticated user mobile menu -->
+        <div v-else-if="!user && mobileMenuOpen" class="md:hidden border-t border-gray-200 bg-white shadow-lg">
+          <div class="px-4 py-3 space-y-1">
+            <router-link
+              to="/login"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              Iniciar sesión
+            </router-link>
+            <router-link
+              to="/register"
+              @click="closeMobileMenu"
+              class="block px-4 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium text-center shadow-md"
+            >
+              Registrarse
+            </router-link>
           </div>
         </div>
       </Transition>

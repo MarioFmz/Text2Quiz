@@ -89,20 +89,78 @@ const inactiveChallenges = computed(() => {
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="challenges.length === 0 && participatedChallenges.length === 0" class="text-center py-12">
-        <div class="text-6xl mb-4">📝</div>
-        <h3 class="text-xl font-semibold text-gray-700 mb-2">
-          No has compartido ni participado en ningún desafío
-        </h3>
-        <p class="text-gray-500 mb-6">
-          Completa un quiz y compártelo, o pide a alguien que te comparta un desafío
-        </p>
-        <button
-          @click="router.push('/documents')"
-          class="btn btn-primary"
-        >
-          Ver Mis Documentos
-        </button>
+      <div v-else-if="challenges.length === 0 && participatedChallenges.length === 0" class="max-w-3xl mx-auto">
+        <div class="text-center py-16 px-4">
+          <!-- Large animated icon -->
+          <div class="mb-8">
+            <div class="text-7xl sm:text-8xl mb-4 transform hover:rotate-12 transition-transform duration-300">🏆</div>
+          </div>
+
+          <!-- Engaging heading with gradient -->
+          <h2 class="text-3xl sm:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-red-600 to-pink-600">
+            ¡Desafía a tus amigos y compite!
+          </h2>
+
+          <!-- Descriptive and encouraging text -->
+          <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+            Aún no has creado ningún desafío ni participado en uno.
+            <span class="font-semibold text-orange-600">Comparte tus quizzes</span> con amigos o únete a desafíos existentes
+            para <span class="font-semibold text-red-600">competir y aprender juntos</span>.
+          </p>
+
+          <!-- Multiple action buttons -->
+          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <router-link
+              to="/quizzes"
+              class="group relative px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-orange-600 to-red-600 rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <span>📚</span>
+                <span>Ver mis quizzes</span>
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </router-link>
+
+            <router-link
+              to="/public-quizzes"
+              class="px-8 py-4 text-lg font-semibold text-orange-600 bg-white border-2 border-orange-600 rounded-xl hover:bg-orange-50 transform hover:scale-105 transition-all duration-300 w-full sm:w-auto"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <span>🌍</span>
+                <span>Explorar desafíos públicos</span>
+              </span>
+            </router-link>
+          </div>
+
+          <!-- How it works cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-orange-100">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="text-3xl">1️⃣</div>
+                <h3 class="font-bold text-gray-900">Completa un quiz</h3>
+              </div>
+              <p class="text-sm text-gray-600">Realiza cualquier quiz de tu biblioteca</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-red-100">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="text-3xl">2️⃣</div>
+                <h3 class="font-bold text-gray-900">Comparte el enlace</h3>
+              </div>
+              <p class="text-sm text-gray-600">Genera un link único para compartir</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-pink-100">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="text-3xl">3️⃣</div>
+                <h3 class="font-bold text-gray-900">Compite y gana</h3>
+              </div>
+              <p class="text-sm text-gray-600">Sigue el ranking en tiempo real</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Challenges List -->

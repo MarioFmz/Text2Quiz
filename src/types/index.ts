@@ -1,4 +1,16 @@
-export type { Database, Document, Quiz, Question, UserAnswer, LearningProgress } from './database.types'
+export type {
+  Database,
+  Document,
+  Quiz,
+  Question,
+  UserAnswer,
+  LearningProgress,
+  QuizCategory,
+  QuizLike,
+  QuizReport,
+  QuizChallenge,
+  ChallengeAttempt
+} from './database.types'
 
 export interface User {
   id: string
@@ -24,4 +36,24 @@ export interface DocumentUploadProgress {
   progress: number
   status: 'uploading' | 'processing' | 'completed' | 'error'
   error?: string
+}
+
+export interface PublicQuizWithDetails extends Quiz {
+  category?: QuizCategory
+  creator?: {
+    display_name: string | null
+    avatar_url: string | null
+  }
+  is_liked?: boolean
+  participants_count?: number
+}
+
+export interface QuizFilters {
+  category?: string
+  tags?: string[]
+  difficulty?: 'easy' | 'medium' | 'hard'
+  search?: string
+  sortBy?: 'popular' | 'recent' | 'likes'
+  page?: number
+  limit?: number
 }

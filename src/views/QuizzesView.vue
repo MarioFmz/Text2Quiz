@@ -158,13 +158,67 @@ const formatDate = (dateString: string) => {
         <p class="text-gray-600">Cargando quizzes...</p>
       </div>
 
-      <div v-else-if="quizzes.length === 0" class="text-center py-12">
-        <div class="text-4xl sm:text-6xl mb-4">📝</div>
-        <h2 class="text-xl sm:text-2xl font-semibold mb-2">No hay quizzes aún</h2>
-        <p class="text-sm sm:text-base text-gray-600 mb-6">Crea tu primer quiz para comenzar</p>
-        <router-link to="/create-quiz" class="btn btn-primary">
-          Crear quiz
-        </router-link>
+      <div v-else-if="quizzes.length === 0" class="max-w-2xl mx-auto">
+        <div class="text-center py-16 px-4">
+          <!-- Large animated icon -->
+          <div class="mb-8 animate-bounce">
+            <div class="text-7xl sm:text-8xl mb-4">📚</div>
+          </div>
+
+          <!-- Engaging heading with gradient -->
+          <h2 class="text-3xl sm:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">
+            ¡Tu biblioteca de quizzes está esperando!
+          </h2>
+
+          <!-- Descriptive and encouraging text -->
+          <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+            Comienza tu viaje de aprendizaje creando tu primer quiz.
+            <span class="font-semibold text-indigo-600">Transforma cualquier documento</span> en una experiencia interactiva
+            o explora quizzes públicos de la comunidad.
+          </p>
+
+          <!-- Multiple action buttons -->
+          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <router-link
+              to="/upload"
+              class="group relative px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <span>📄</span>
+                <span>Subir documento</span>
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </router-link>
+
+            <router-link
+              to="/public-quizzes"
+              class="px-8 py-4 text-lg font-semibold text-indigo-600 bg-white border-2 border-indigo-600 rounded-xl hover:bg-indigo-50 transform hover:scale-105 transition-all duration-300 w-full sm:w-auto"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <span>🌍</span>
+                <span>Explorar quizzes públicos</span>
+              </span>
+            </router-link>
+          </div>
+
+          <!-- Quick stats or features -->
+          <div class="mt-12 grid grid-cols-3 gap-6">
+            <div class="text-center">
+              <div class="text-4xl mb-2">✨</div>
+              <p class="text-sm text-gray-600">IA Avanzada</p>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl mb-2">🎯</div>
+              <p class="text-sm text-gray-600">Aprende Jugando</p>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl mb-2">📊</div>
+              <p class="text-sm text-gray-600">Sigue tu Progreso</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-else>
@@ -183,11 +237,11 @@ const formatDate = (dateString: string) => {
             class="card hover:shadow-md transition-shadow cursor-pointer"
             @click="goToQuiz(quiz.id)"
           >
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex items-center space-x-3">
-                <span class="text-3xl">{{ getDifficultyIcon(quiz.difficulty) }}</span>
+            <div class="mb-4">
+              <div class="flex items-start space-x-3">
+                <span class="text-3xl flex-shrink-0">{{ getDifficultyIcon(quiz.difficulty) }}</span>
                 <div class="flex-1 min-w-0">
-                  <h3 class="font-semibold truncate">{{ quiz.title }}</h3>
+                  <h3 class="font-semibold text-gray-900 line-clamp-2 mb-1">{{ quiz.title }}</h3>
                   <p class="text-sm text-gray-500">{{ formatDate(quiz.generated_at) }}</p>
                 </div>
               </div>

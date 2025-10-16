@@ -6,11 +6,15 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { quizzesService } from '@/services/quizzesService'
-import type { Question } from '@/types'
+import { updateQuizVisibility, getCategories } from '@/services/publicQuizzesService'
+import type { Question, QuizCategory } from '@/types'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 const { user } = useAuth()
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 const quizId = route.params.id as string
 
@@ -29,6 +33,20 @@ const expandedAttemptId = ref<string | null>(null)
 const attemptAnswers = ref<Record<string, any>>({})
 const loadingAttempt = ref<string | null>(null)
 
+// Edit visibility modal
+const showEditModal = ref(false)
+const editingVisibility = ref(false)
+const selectedVisibility = ref<'private' | 'public' | 'unlisted'>('private')
+const selectedCategory = ref('')
+const quizTags = ref<string[]>([])
+const quizSource = ref('')
+const tagInput = ref('')
+const categories = ref<QuizCategory[]>([])
+
+// Delete confirmation
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const progress = computed(() => ((currentQuestionIndex.value + 1) / questions.value.length) * 100)
 const isLastQuestion = computed(() => currentQuestionIndex.value === questions.value.length - 1)
@@ -43,6 +61,9 @@ onMounted(async () => {
     if (user.value) {
       previousAttempts.value = await quizzesService.getQuizAttempts(user.value.id, quizId)
     }
+
+    // Cargar categorías para el selector
+    categories.value = await getCategories()
   } catch (error) {
     console.error('Error loading quiz:', error)
   } finally {
@@ -186,6 +207,99 @@ const toggleAttemptDetails = async (attemptId: string, attemptCompletedAt: strin
 const getQuestionForId = (questionId: string) => {
   return questions.value.find(q => q.id === questionId)
 }
+
+// Check if current user is the owner
+const isOwner = computed(() => {
+  return user.value && quiz.value && user.value.id === quiz.value.user_id
+})
+
+// Edit visibility functions
+const openEditModal = () => {
+  if (!quiz.value) return
+
+  // Cargar valores actuales
+  selectedVisibility.value = quiz.value.visibility || 'private'
+  selectedCategory.value = quiz.value.category_id || ''
+  quizTags.value = quiz.value.tags || []
+  quizSource.value = quiz.value.source || ''
+
+  showEditModal.value = true
+}
+
+const addTag = () => {
+  const tag = tagInput.value.trim()
+  if (tag && !quizTags.value.includes(tag)) {
+    quizTags.value.push(tag)
+    tagInput.value = ''
+  }
+}
+
+const removeTag = (tag: string) => {
+  quizTags.value = quizTags.value.filter(t => t !== tag)
+}
+
+const saveVisibilityChanges = async () => {
+  if (!user.value || !quiz.value) return
+
+  editingVisibility.value = true
+  try {
+    const updateData: any = {
+      visibility: selectedVisibility.value
+    }
+
+    // Si es público, incluir campos adicionales
+    if (selectedVisibility.value === 'public') {
+      updateData.category_id = selectedCategory.value
+      updateData.tags = quizTags.value
+      updateData.source = quizSource.value
+    }
+
+    await updateQuizVisibility(quiz.value.id, user.value.id, updateData)
+
+    // Actualizar el quiz local
+    quiz.value.visibility = selectedVisibility.value
+    if (selectedVisibility.value === 'public') {
+      quiz.value.category_id = selectedCategory.value
+      quiz.value.tags = quizTags.value
+      quiz.value.source = quizSource.value
+    }
+
+    showEditModal.value = false
+    alert('Quiz actualizado correctamente')
+  } catch (error) {
+    console.error('Error updating quiz:', error)
+    alert('Error al actualizar el quiz')
+  } finally {
+    editingVisibility.value = false
+  }
+}
+
+// Delete quiz functions
+const confirmDelete = () => {
+  showDeleteConfirm.value = true
+}
+
+const deleteQuiz = async () => {
+  if (!user.value || !quiz.value) return
+
+  deleting.value = true
+  try {
+    await axios.delete(`${API_URL}/api/quizzes/${quiz.value.id}`, {
+      headers: {
+        'user-id': user.value.id
+      }
+    })
+
+    alert('Quiz eliminado correctamente')
+    router.push('/quizzes')
+  } catch (error) {
+    console.error('Error deleting quiz:', error)
+    alert('Error al eliminar el quiz')
+  } finally {
+    deleting.value = false
+    showDeleteConfirm.value = false
+  }
+}
 </script>
 
 <template>
@@ -309,6 +423,24 @@ const getQuestionForId = (questionId: string) => {
               <div class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">~{{ Math.ceil(questions.length * 1.5) }} min</div>
               <div class="text-xs sm:text-sm text-gray-600">Tiempo</div>
             </div>
+          </div>
+
+          <!-- Edit/Delete buttons for quiz owner -->
+          <div v-if="isOwner" class="flex justify-center gap-3 mb-6">
+            <button
+              @click="openEditModal"
+              class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <span>⚙️</span>
+              <span>Editar privacidad</span>
+            </button>
+            <button
+              @click="confirmDelete"
+              class="px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <span>🗑️</span>
+              <span>Eliminar quiz</span>
+            </button>
           </div>
 
           <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
@@ -505,6 +637,206 @@ const getQuestionForId = (questionId: string) => {
           </button>
         </div>
       </div>
+
+      <!-- Edit Visibility Modal -->
+      <Transition name="fade">
+        <div
+          v-if="showEditModal"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          @click.self="showEditModal = false"
+        >
+          <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">Editar configuración del quiz</h2>
+              <button
+                @click="showEditModal = false"
+                class="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div class="space-y-6">
+              <!-- Visibility Selector -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                  Visibilidad del Quiz
+                </label>
+                <div class="space-y-3">
+                  <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="selectedVisibility === 'private' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                    <input
+                      type="radio"
+                      value="private"
+                      v-model="selectedVisibility"
+                      class="mt-1 mr-3"
+                    />
+                    <div>
+                      <div class="font-medium">🔒 Privado</div>
+                      <div class="text-sm text-gray-600">Solo tú puedes ver y hacer este quiz</div>
+                    </div>
+                  </label>
+
+                  <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="selectedVisibility === 'unlisted' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                    <input
+                      type="radio"
+                      value="unlisted"
+                      v-model="selectedVisibility"
+                      class="mt-1 mr-3"
+                    />
+                    <div>
+                      <div class="font-medium">🔗 No listado</div>
+                      <div class="text-sm text-gray-600">Solo quienes tengan el enlace pueden acceder</div>
+                    </div>
+                  </label>
+
+                  <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="selectedVisibility === 'public' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                    <input
+                      type="radio"
+                      value="public"
+                      v-model="selectedVisibility"
+                      class="mt-1 mr-3"
+                    />
+                    <div>
+                      <div class="font-medium">🌍 Público</div>
+                      <div class="text-sm text-gray-600">Cualquiera puede encontrar y hacer este quiz</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Public Quiz Options -->
+              <div v-if="selectedVisibility === 'public'" class="space-y-4 p-4 bg-blue-50 rounded-lg">
+                <h3 class="font-semibold text-blue-900">Información pública del quiz</h3>
+
+                <!-- Category -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Categoría *
+                  </label>
+                  <select
+                    v-model="selectedCategory"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Tags -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Etiquetas (para facilitar búsqueda)
+                  </label>
+                  <div class="flex gap-2 mb-2">
+                    <input
+                      v-model="tagInput"
+                      @keypress.enter.prevent="addTag"
+                      type="text"
+                      placeholder="Ej: oposiciones, tema1, civil"
+                      class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      @click="addTag"
+                      type="button"
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      Añadir
+                    </button>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="tag in quizTags"
+                      :key="tag"
+                      class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                    >
+                      {{ tag }}
+                      <button
+                        @click="removeTag(tag)"
+                        class="hover:text-blue-900"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Source -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Fuente (opcional)
+                  </label>
+                  <input
+                    v-model="quizSource"
+                    type="text"
+                    placeholder="Ej: Examen oficial 2023, BOE Tema 15"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  @click="showEditModal = false"
+                  class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                  :disabled="editingVisibility"
+                >
+                  Cancelar
+                </button>
+                <button
+                  @click="saveVisibilityChanges"
+                  class="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium"
+                  :disabled="editingVisibility || (selectedVisibility === 'public' && !selectedCategory)"
+                >
+                  {{ editingVisibility ? 'Guardando...' : 'Guardar cambios' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Delete Confirmation Modal -->
+      <Transition name="fade">
+        <div
+          v-if="showDeleteConfirm"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          @click.self="showDeleteConfirm = false"
+        >
+          <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <div class="text-center mb-6">
+              <div class="text-5xl mb-4">⚠️</div>
+              <h2 class="text-2xl font-bold mb-2">¿Eliminar quiz?</h2>
+              <p class="text-gray-600">
+                Esta acción no se puede deshacer. Se eliminarán todas las preguntas, respuestas y estadísticas asociadas.
+              </p>
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                @click="showDeleteConfirm = false"
+                class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                :disabled="deleting"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="deleteQuiz"
+                class="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
+                :disabled="deleting"
+              >
+                {{ deleting ? 'Eliminando...' : 'Eliminar definitivamente' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
   </AppLayout>
 </template>
@@ -520,6 +852,16 @@ const getQuestionForId = (questionId: string) => {
 .expand-enter-from,
 .expand-leave-to {
   max-height: 0;
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>

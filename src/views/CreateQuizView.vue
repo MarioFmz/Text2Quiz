@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
 import DocumentSelector from '@/components/DocumentSelector.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { documentsService } from '@/services/documentsService'
 import { useToast } from '@/composables/useToast'
+import { getCategories, updateQuizVisibility } from '@/services/publicQuizzesService'
 
 const router = useRouter()
 const { user } = useAuth()
@@ -18,6 +19,14 @@ const newFiles = ref<File[]>([])
 const difficulty = ref<'easy' | 'medium' | 'hard'>('medium')
 const numQuestions = ref(10)
 const questionType = ref<'mixed' | 'multiple_choice' | 'true_false'>('mixed')
+
+// Public quiz fields
+const visibility = ref<'private' | 'public' | 'unlisted'>('private')
+const selectedCategory = ref<string>('')
+const quizTags = ref<string[]>([])
+const quizSource = ref('')
+const tagInput = ref('')
+const categories = ref<any[]>([])
 
 // UI state
 const activeTab = ref<'upload' | 'library'>('upload')
@@ -64,6 +73,27 @@ const removeFile = (index: number) => {
 const handleSelectedDocuments = (documentIds: string[]) => {
   selectedDocumentIds.value = documentIds
 }
+
+// Tag management
+const addTag = () => {
+  if (tagInput.value.trim() && !quizTags.value.includes(tagInput.value.trim())) {
+    quizTags.value.push(tagInput.value.trim())
+    tagInput.value = ''
+  }
+}
+
+const removeTag = (index: number) => {
+  quizTags.value.splice(index, 1)
+}
+
+// Load categories on mount
+onMounted(async () => {
+  try {
+    categories.value = await getCategories()
+  } catch (error) {
+    console.error('Error loading categories:', error)
+  }
+})
 
 const generateQuiz = async () => {
   if (!user.value || !canGenerate.value) return
@@ -119,9 +149,27 @@ const generateQuiz = async () => {
     }
 
     const result = await response.json()
+    const createdQuizId = result.quiz.id
 
-    showSuccess('¡Quiz creado exitosamente!')
-    router.push(`/quiz/${result.quiz.id}`)
+    // If quiz is public, update visibility and metadata
+    if (visibility.value === 'public' && user.value) {
+      try {
+        await updateQuizVisibility(createdQuizId, user.value.id, {
+          visibility: visibility.value,
+          category_id: selectedCategory.value || undefined,
+          tags: quizTags.value.length > 0 ? quizTags.value : undefined,
+          source: quizSource.value || undefined
+        })
+        showSuccess('¡Quiz creado y publicado exitosamente!')
+      } catch (error) {
+        console.error('Error updating visibility:', error)
+        showSuccess('Quiz creado, pero hubo un error al publicarlo')
+      }
+    } else {
+      showSuccess('¡Quiz creado exitosamente!')
+    }
+
+    router.push(`/quiz/${createdQuizId}`)
   } catch (error: any) {
     console.error('Error creating quiz:', error)
     showError(error.message || 'Error al crear el quiz')
@@ -399,6 +447,153 @@ const generateQuiz = async () => {
                   </div>
                   <p class="text-xs text-gray-600">Solo verdadero/falso</p>
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visibilidad y Metadatos -->
+        <div class="card border-2 border-gray-300 p-3 sm:p-6">
+          <div class="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div class="flex-shrink-0">
+              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-sm sm:text-base">
+                🌐
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-base sm:text-xl font-bold mb-1 sm:mb-2">Visibilidad</h2>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Decide quién puede ver tu quiz
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4 sm:space-y-6">
+            <!-- Visibility Selector -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                ¿Quién puede ver este quiz?
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  @click="visibility = 'private'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="visibility === 'private'
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-gray-300 hover:border-indigo-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">🔒</span>
+                    <span class="font-semibold text-sm">Privado</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Solo tú</p>
+                </button>
+
+                <button
+                  type="button"
+                  @click="visibility = 'unlisted'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="visibility === 'unlisted'
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-gray-300 hover:border-indigo-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">🔗</span>
+                    <span class="font-semibold text-sm">No listado</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Solo con link</p>
+                </button>
+
+                <button
+                  type="button"
+                  @click="visibility = 'public'"
+                  class="p-3 sm:p-4 rounded-lg border-2 transition-all text-left"
+                  :class="visibility === 'public'
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-gray-300 hover:border-indigo-300 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-lg">🌍</span>
+                    <span class="font-semibold text-sm">Público</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Todos pueden verlo</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Public Quiz Metadata (only shown if public) -->
+            <div v-if="visibility === 'public'" class="space-y-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+              <p class="text-sm text-indigo-800 font-medium mb-3">
+                ℹ️ Completa estos datos para que tu quiz sea más fácil de encontrar
+              </p>
+
+              <!-- Category -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Categoría de oposición
+                </label>
+                <select
+                  v-model="selectedCategory"
+                  class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                >
+                  <option value="">-- Selecciona una categoría --</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                    {{ cat.icon }} {{ cat.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Tags -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Etiquetas (palabras clave)
+                </label>
+                <div class="flex gap-2 mb-2">
+                  <input
+                    v-model="tagInput"
+                    @keyup.enter="addTag"
+                    type="text"
+                    placeholder="Añade una etiqueta..."
+                    class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    @click="addTag"
+                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
+                  >
+                    Añadir
+                  </button>
+                </div>
+                <div v-if="quizTags.length > 0" class="flex flex-wrap gap-2">
+                  <span
+                    v-for="(tag, index) in quizTags"
+                    :key="index"
+                    class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                  >
+                    {{ tag }}
+                    <button
+                      type="button"
+                      @click="removeTag(index)"
+                      class="hover:text-indigo-900"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Source -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Fuente del examen (opcional)
+                </label>
+                <input
+                  v-model="quizSource"
+                  type="text"
+                  placeholder="Ej: Examen oficial 2023, Simulacro PrepareYa..."
+                  class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                />
               </div>
             </div>
           </div>

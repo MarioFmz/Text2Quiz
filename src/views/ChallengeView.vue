@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { documentsService } from '@/services/documentsService'
@@ -13,6 +13,7 @@ const router = useRouter()
 const { user } = useAuth()
 
 const identifier = route.params.identifier as string
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 const loading = ref(true)
 const challenge = ref<any>(null)
@@ -31,6 +32,15 @@ const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 const isCreator = ref(false)
 
+// Auto-save progress variables
+const sessionId = ref<string>('')
+const lastSavedTime = ref<Date | null>(null)
+const autoSaveInterval = ref<number | null>(null)
+const savingProgress = ref(false)
+const showProgressModal = ref(false)
+const savedProgressData = ref<any>(null)
+const answersCount = ref(0)
+
 // Computed property to check if user has already completed this challenge
 const hasCompletedBefore = computed(() => {
   if (!user.value) return false
@@ -43,6 +53,218 @@ const startButtonText = computed(() => {
   if (hasCompletedBefore.value) return 'Reintentar'
   return 'Comenzar desafío'
 })
+
+// ============================================
+// AUTO-SAVE PROGRESS FUNCTIONS
+// ============================================
+
+// Generate unique session ID for anonymous users
+const generateSessionId = (): string => {
+  return 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
+}
+
+// Get or create session ID
+const getSessionId = (): string => {
+  if (!sessionId.value) {
+    // Try to get from localStorage first
+    const stored = localStorage.getItem(`challenge_session_${identifier}`)
+    if (stored) {
+      sessionId.value = stored
+    } else {
+      sessionId.value = generateSessionId()
+      localStorage.setItem(`challenge_session_${identifier}`, sessionId.value)
+    }
+  }
+  return sessionId.value
+}
+
+// Save progress to localStorage (instant backup)
+const saveProgressToLocalStorage = () => {
+  try {
+    const progress = {
+      answers: userAnswers.value,
+      currentQuestionIndex: currentQuestionIndex.value,
+      startTime: quizStartTime.value,
+      lastSaved: Date.now()
+    }
+    localStorage.setItem(`challenge_progress_${challenge.value.id}`, JSON.stringify(progress))
+    console.log('Progress saved to localStorage')
+  } catch (error) {
+    console.error('Error saving to localStorage:', error)
+  }
+}
+
+// Save progress to database
+const saveProgressToDatabase = async () => {
+  if (!challenge.value?.id || savingProgress.value) return
+
+  savingProgress.value = true
+  try {
+    const response = await fetch(`${apiUrl}/api/challenges/${challenge.value.id}/save-progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.value?.id || null,
+        sessionId: user.value ? null : getSessionId(),
+        answers: userAnswers.value,
+        currentQuestionIndex: currentQuestionIndex.value
+      })
+    })
+
+    if (response.ok) {
+      lastSavedTime.value = new Date()
+      console.log('Progress saved to database')
+    }
+  } catch (error) {
+    console.error('Error saving progress to database:', error)
+  } finally {
+    savingProgress.value = false
+  }
+}
+
+// Load saved progress
+const loadSavedProgress = async () => {
+  if (!challenge.value?.id) return
+
+  try {
+    // Try loading from database first
+    const params = new URLSearchParams({
+      userId: user.value?.id || '',
+      sessionId: user.value ? '' : getSessionId()
+    })
+
+    const response = await fetch(`${apiUrl}/api/challenges/${challenge.value.id}/get-progress?${params}`)
+
+    if (response.ok) {
+      const data = await response.json()
+      if (data.progress && Object.keys(data.progress.answers || {}).length > 0) {
+        savedProgressData.value = data.progress
+        showProgressModal.value = true
+        return
+      }
+    }
+
+    // Fallback to localStorage
+    const localProgress = localStorage.getItem(`challenge_progress_${challenge.value.id}`)
+    if (localProgress) {
+      const progress = JSON.parse(localProgress)
+      if (Object.keys(progress.answers || {}).length > 0) {
+        savedProgressData.value = {
+          answers: progress.answers,
+          current_question_index: progress.currentQuestionIndex,
+          last_updated: new Date(progress.lastSaved).toISOString()
+        }
+        showProgressModal.value = true
+      }
+    }
+  } catch (error) {
+    console.error('Error loading saved progress:', error)
+  }
+}
+
+// Restore progress from saved data
+const restoreProgress = () => {
+  if (!savedProgressData.value) return
+
+  userAnswers.value = savedProgressData.value.answers || {}
+  currentQuestionIndex.value = savedProgressData.value.current_question_index || 0
+  answersCount.value = Object.keys(userAnswers.value).length
+
+  showProgressModal.value = false
+  showSummary.value = false
+  quizStartTime.value = Date.now()
+
+  // Start auto-save
+  startAutoSave()
+
+  console.log(`Progress restored: ${answersCount.value} answers, question ${currentQuestionIndex.value + 1}`)
+}
+
+// Start from scratch (clear saved progress)
+const startFresh = async () => {
+  await clearSavedProgress()
+  showProgressModal.value = false
+}
+
+// Clear saved progress
+const clearSavedProgress = async () => {
+  try {
+    // Clear from database
+    if (challenge.value?.id) {
+      await fetch(`${apiUrl}/api/challenges/${challenge.value.id}/delete-progress`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.value?.id || null,
+          sessionId: user.value ? null : getSessionId()
+        })
+      })
+    }
+
+    // Clear from localStorage
+    localStorage.removeItem(`challenge_progress_${challenge.value?.id}`)
+    savedProgressData.value = null
+
+    console.log('Progress cleared')
+  } catch (error) {
+    console.error('Error clearing progress:', error)
+  }
+}
+
+// Start auto-save interval
+const startAutoSave = () => {
+  stopAutoSave() // Clear any existing interval
+
+  // Save every 2 minutes
+  autoSaveInterval.value = window.setInterval(() => {
+    if (!showSummary.value && !showResults.value && Object.keys(userAnswers.value).length > 0) {
+      saveProgressToDatabase()
+    }
+  }, 120000) // 2 minutes
+}
+
+// Stop auto-save interval
+const stopAutoSave = () => {
+  if (autoSaveInterval.value) {
+    clearInterval(autoSaveInterval.value)
+    autoSaveInterval.value = null
+  }
+}
+
+// Save and exit
+const saveAndExit = async () => {
+  await saveProgressToDatabase()
+  router.push('/dashboard')
+}
+
+// Watch for answer changes to save to localStorage and count
+watch(userAnswers, () => {
+  answersCount.value = Object.keys(userAnswers.value).length
+  saveProgressToLocalStorage()
+
+  // Save to database every 5 questions
+  if (answersCount.value % 5 === 0 && answersCount.value > 0) {
+    saveProgressToDatabase()
+  }
+}, { deep: true })
+
+// Save before leaving page
+onBeforeUnmount(() => {
+  stopAutoSave()
+  if (!showResults.value && Object.keys(userAnswers.value).length > 0) {
+    saveProgressToDatabase()
+  }
+})
+
+// Save before closing browser
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', (e) => {
+    if (!showResults.value && Object.keys(userAnswers.value).length > 0) {
+      saveProgressToLocalStorage()
+      // Note: saveProgressToDatabase might not complete before page unloads
+    }
+  })
+}
 
 onMounted(async () => {
   // Verificar autenticación
@@ -87,7 +309,6 @@ const loadUserProfile = async () => {
 
 const loadChallenge = async () => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
     const response = await fetch(`${apiUrl}/api/challenges/${identifier}`)
 
     if (!response.ok) {
@@ -107,6 +328,9 @@ const loadChallenge = async () => {
 
     // Load leaderboard
     await loadLeaderboard()
+
+    // Check for saved progress AFTER challenge is loaded
+    await loadSavedProgress()
   } catch (error) {
     console.error('Error loading challenge:', error)
     alert('No se pudo cargar el desafío')
@@ -181,7 +405,6 @@ const submitQuiz = async () => {
       ? Math.floor((Date.now() - quizStartTime.value) / 1000)
       : 0
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
     await fetch(`${apiUrl}/api/challenges/${challenge.value.id}/attempt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -193,6 +416,10 @@ const submitQuiz = async () => {
         timeTaken
       })
     })
+
+    // Clear saved progress after successful submission
+    await clearSavedProgress()
+    stopAutoSave()
 
     await loadLeaderboard()
     showResults.value = true
@@ -224,16 +451,19 @@ const calculateResults = () => {
   }
 }
 
-const restartQuiz = () => {
+const restartQuiz = async () => {
+  await clearSavedProgress()
   userAnswers.value = {}
   currentQuestionIndex.value = 0
   showResults.value = false
   showSummary.value = true
+  stopAutoSave()
 }
 
 const startQuiz = () => {
   showSummary.value = false
   quizStartTime.value = Date.now()
+  startAutoSave() // Start auto-save when quiz begins
 }
 
 const toggleLeaderboard = () => {
@@ -289,6 +519,43 @@ const triggerConfetti = () => {
       <div v-if="loading" class="text-center py-12">
         <p class="text-gray-600">Cargando desafío...</p>
       </div>
+
+      <!-- Modal: Restore Progress -->
+      <Transition name="fade">
+        <div
+          v-if="showProgressModal && savedProgressData"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          @click.self="startFresh"
+        >
+          <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div class="text-center mb-6">
+              <div class="text-5xl mb-4">💾</div>
+              <h2 class="text-2xl font-bold mb-2">Progreso Guardado</h2>
+              <p class="text-gray-600">
+                Encontramos un intento en progreso con <strong>{{ Object.keys(savedProgressData.answers || {}).length }}</strong> respuestas guardadas.
+              </p>
+              <p class="text-sm text-gray-500 mt-2">
+                Última actualización: {{ new Date(savedProgressData.last_updated).toLocaleString('es-ES') }}
+              </p>
+            </div>
+
+            <div class="space-y-3">
+              <button
+                @click="restoreProgress"
+                class="w-full px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+              >
+                Continuar donde lo dejé
+              </button>
+              <button
+                @click="startFresh"
+                class="w-full px-6 py-3 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Empezar de nuevo
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
 
       <!-- Results View -->
       <div v-else-if="showResults" class="space-y-4 sm:space-y-6">
@@ -613,6 +880,21 @@ const triggerConfetti = () => {
           </span>
         </div>
 
+        <!-- Auto-save indicator -->
+        <div class="flex items-center justify-center gap-2 text-xs text-gray-500">
+          <span v-if="savingProgress" class="flex items-center gap-1">
+            <svg class="animate-spin h-3 w-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Guardando...</span>
+          </span>
+          <span v-else-if="lastSavedTime" class="flex items-center gap-1">
+            <span class="text-green-600">✓</span>
+            <span>Guardado automáticamente a las {{ lastSavedTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }}</span>
+          </span>
+        </div>
+
         <div class="card">
           <div class="mb-6">
             <h2 class="text-base sm:text-lg font-semibold mb-4">
@@ -660,6 +942,17 @@ const triggerConfetti = () => {
               class="btn btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ submitting ? 'Enviando...' : 'Finalizar' }}
+            </button>
+          </div>
+
+          <!-- Save & Exit button -->
+          <div class="mt-4 pt-4 border-t border-gray-200">
+            <button
+              @click="saveAndExit"
+              class="w-full sm:w-auto px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <span>💾</span>
+              <span>Guardar y salir</span>
             </button>
           </div>
         </div>

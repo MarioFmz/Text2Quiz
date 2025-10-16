@@ -144,13 +144,61 @@ const viewDocument = async (filePath: string) => {
         <p class="text-gray-600">Cargando documentos...</p>
       </div>
 
-      <div v-else-if="documents.length === 0" class="text-center py-12">
-        <div class="text-4xl sm:text-6xl mb-4">📄</div>
-        <h2 class="text-xl sm:text-2xl font-semibold mb-2">No hay documentos aún</h2>
-        <p class="text-sm sm:text-base text-gray-600 mb-6">Sube tu primer documento para comenzar</p>
-        <router-link to="/upload" class="btn btn-primary">
-          Subir documento
-        </router-link>
+      <div v-else-if="documents.length === 0" class="max-w-2xl mx-auto">
+        <div class="text-center py-16 px-4">
+          <!-- Large animated icon -->
+          <div class="mb-8">
+            <div class="text-7xl sm:text-8xl mb-4 transform hover:scale-110 transition-transform duration-300">📚</div>
+          </div>
+
+          <!-- Engaging heading with gradient -->
+          <h2 class="text-3xl sm:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600">
+            ¡Transforma tus documentos en conocimiento!
+          </h2>
+
+          <!-- Descriptive and encouraging text -->
+          <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+            Sube cualquier PDF, imagen o documento y nuestra
+            <span class="font-semibold text-blue-600">inteligencia artificial</span> lo convertirá en quizzes interactivos.
+            <br />
+            <span class="text-gray-500">Aprende de forma más eficiente y divertida.</span>
+          </p>
+
+          <!-- Primary action button -->
+          <div class="mb-12">
+            <router-link
+              to="/upload"
+              class="group relative inline-flex px-10 py-5 text-lg font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <span class="flex items-center gap-3">
+                <span class="text-2xl">📤</span>
+                <span>Subir tu primer documento</span>
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </router-link>
+          </div>
+
+          <!-- Features grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 transform hover:scale-105 transition-all duration-300">
+              <div class="text-4xl mb-3">📄</div>
+              <h3 class="font-bold text-gray-900 mb-2">Múltiples formatos</h3>
+              <p class="text-sm text-gray-600">PDFs, imágenes y más</p>
+            </div>
+            <div class="bg-gradient-to-br from-cyan-50 to-teal-50 rounded-xl p-6 transform hover:scale-105 transition-all duration-300">
+              <div class="text-4xl mb-3">⚡</div>
+              <h3 class="font-bold text-gray-900 mb-2">Generación rápida</h3>
+              <p class="text-sm text-gray-600">Quizzes en segundos</p>
+            </div>
+            <div class="bg-gradient-to-br from-teal-50 to-green-50 rounded-xl p-6 transform hover:scale-105 transition-all duration-300">
+              <div class="text-4xl mb-3">🎯</div>
+              <h3 class="font-bold text-gray-900 mb-2">Personalizable</h3>
+              <p class="text-sm text-gray-600">Dificultad y cantidad</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-else>

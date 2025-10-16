@@ -57,6 +57,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/public-quizzes',
+    name: 'public-quizzes',
+    component: () => import('@/views/PublicQuizzesView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/public-quiz/:id',
+    name: 'public-quiz',
+    component: () => import('@/views/PublicQuizDetailView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/challenge/:identifier',
     name: 'challenge',
     component: () => import('@/views/ChallengeView.vue'),
@@ -85,7 +97,18 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
 
-  // Esperar a que la autenticación se inicialice
+  // Si la ruta no requiere autenticación, permitir acceso inmediato
+  if (!to.meta.requiresAuth) {
+    // Redirigir usuarios autenticados de login/register al dashboard
+    if ((to.name === 'login' || to.name === 'register') && authStore.user) {
+      next('/dashboard')
+    } else {
+      next()
+    }
+    return
+  }
+
+  // Solo esperar autenticación para rutas protegidas
   if (authStore.loading) {
     await new Promise<void>((resolve) => {
       const unwatch = authStore.$subscribe(() => {
@@ -97,10 +120,12 @@ router.beforeEach(async (to, _from, next) => {
     })
   }
 
+  // Verificar autenticación para rutas protegidas
   if (to.meta.requiresAuth && !authStore.user) {
-    next('/login')
-  } else if ((to.name === 'login' || to.name === 'register') && authStore.user) {
-    next('/dashboard')
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    })
   } else {
     next()
   }
