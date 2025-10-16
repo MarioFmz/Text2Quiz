@@ -24,13 +24,10 @@ const shareText = computed(() => {
   return `${emoji} ¡Acabo de completar "${props.quizTitle}"!\n\nResultado: ${props.score}/${props.totalQuestions} (${props.percentage}%)\n\n¿Puedes superarme?`
 })
 
-const shareUrl = computed(() => {
-  return challengeUrl.value || window.location.href
-})
-
 // Generar URL del desafío
-const generateChallengeUrl = async () => {
-  if (challengeUrl.value || generatingChallenge.value) return challengeUrl.value
+const generateChallengeUrl = async (): Promise<string> => {
+  if (challengeUrl.value) return challengeUrl.value
+  if (generatingChallenge.value) return window.location.href
 
   generatingChallenge.value = true
   try {

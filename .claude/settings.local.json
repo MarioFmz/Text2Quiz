@@ -10,7 +10,14 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(curl:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test)",
+      "Bash(npm run build)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

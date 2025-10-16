@@ -67,7 +67,7 @@ export class DocumentsService {
           file_type: file.type === 'application/pdf' ? 'pdf' : 'image',
           processed_status: 'completed',
           extracted_text: processed.text
-        })
+        } as any)
         .select()
         .single()
 
@@ -76,7 +76,7 @@ export class DocumentsService {
         throw dbError
       }
 
-      console.log('Document saved to database:', document.id)
+      console.log('Document saved to database:', (document as any)?.id)
 
       return {
         document,
