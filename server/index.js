@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const OpenAI = require('openai').default;
-const { createClient } = require('@supabase/supabase-js');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
@@ -909,4 +909,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Exportar app para Vercel serverless
-module.exports = app;
+export default app;
