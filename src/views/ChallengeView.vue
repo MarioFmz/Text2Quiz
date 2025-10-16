@@ -618,6 +618,26 @@ const triggerConfetti = () => {
           </div>
         </div>
 
+        <!-- Info: Ver historial completo -->
+        <div v-if="isCreator" class="card bg-blue-50 border-2 border-blue-200">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div class="flex-1">
+              <h4 class="font-bold text-blue-900 mb-1">Historial completo de intentos</h4>
+              <p class="text-sm text-blue-800 mb-3">
+                Puedes ver todos tus intentos anteriores y el detalle de cada uno en tu quiz guardado.
+              </p>
+              <router-link
+                :to="`/quiz/${quiz.id}`"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <span>📊</span>
+                <span>Ver historial en Mis Quizzes</span>
+              </router-link>
+            </div>
+          </div>
+        </div>
+
         <!-- Leaderboard -->
         <div v-if="showLeaderboard && leaderboard.length > 0" class="card">
           <h3 class="text-xl font-bold mb-4 flex items-center space-x-2">
@@ -740,8 +760,8 @@ const triggerConfetti = () => {
             <p class="text-sm sm:text-base text-gray-600 leading-relaxed">{{ quiz.summary }}</p>
           </div>
 
-          <!-- Study Material Section (if combined_content exists) -->
-          <div v-if="quiz.combined_content" class="mb-6">
+          <!-- Study Material Section (if formatted_content exists) -->
+          <div v-if="quiz.formatted_content || quiz.combined_content" class="mb-6">
             <button
               @click="showStudyMaterial = !showStudyMaterial"
               class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg transition-all duration-200 border-2 border-blue-200"
@@ -749,8 +769,8 @@ const triggerConfetti = () => {
               <div class="flex items-center space-x-3">
                 <span class="text-2xl">📖</span>
                 <div class="text-left">
-                  <h3 class="font-bold text-gray-900">Material de Estudio Completo</h3>
-                  <p class="text-xs sm:text-sm text-gray-600">Contenido del documento original</p>
+                  <h3 class="font-bold text-gray-900">Material de Estudio</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Contenido formateado para tu repaso</p>
                 </div>
               </div>
               <svg
@@ -766,10 +786,10 @@ const triggerConfetti = () => {
 
             <!-- Collapsible Content -->
             <Transition name="expand">
-              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg">
+              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg shadow-sm">
                 <div class="prose prose-sm sm:prose max-w-none">
                   <div class="text-sm sm:text-base text-gray-800 whitespace-pre-line leading-relaxed">
-                    {{ quiz.combined_content }}
+                    {{ quiz.formatted_content || quiz.combined_content }}
                   </div>
                 </div>
               </div>

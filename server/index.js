@@ -992,7 +992,9 @@ app.get('/api/challenges/:identifier', async (req, res) => {
           difficulty,
           total_questions,
           summary,
-          document_id
+          document_id,
+          formatted_content,
+          combined_content
         )
       `)
       .or(orCondition)
