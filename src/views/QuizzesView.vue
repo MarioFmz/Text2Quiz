@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import EditTitleModal from '@/components/EditTitleModal.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { quizzesService } from '@/services/quizzesService'
+import { useToast } from '@/composables/useToast'
 import type { Quiz } from '@/types'
 
 const router = useRouter()
 const { user } = useAuth()
+const { success, error: showError } = useToast()
 
 const quizzes = ref<Quiz[]>([])
 const loading = ref(true)
 const error = ref('')
 const deletingId = ref<string | null>(null)
+const editingId = ref<string | null>(null)
 const showDeleteModal = ref(false)
+const showEditModal = ref(false)
 const quizToDelete = ref<string | null>(null)
+const quizToEdit = ref<Quiz | null>(null)
 const searchQuery = ref('')
 const filterDifficulty = ref<'all' | 'easy' | 'medium' | 'hard'>('all')
 
@@ -81,6 +87,38 @@ const confirmDeleteQuiz = async () => {
 
 const cancelDelete = () => {
   quizToDelete.value = null
+}
+
+const promptEditQuiz = (quiz: Quiz) => {
+  quizToEdit.value = quiz
+  showEditModal.value = true
+}
+
+const confirmEditQuiz = async (newTitle: string) => {
+  if (!user.value || !quizToEdit.value) return
+
+  try {
+    editingId.value = quizToEdit.value.id
+    await quizzesService.updateQuizTitle(quizToEdit.value.id, user.value.id, newTitle)
+
+    // Actualizar el título en la lista local
+    const quizIndex = quizzes.value.findIndex(q => q.id === quizToEdit.value!.id)
+    if (quizIndex !== -1) {
+      quizzes.value[quizIndex].title = newTitle
+    }
+
+    success('Título actualizado correctamente')
+  } catch (e: any) {
+    error.value = e.message || 'Error al actualizar el título'
+    showError('No se pudo actualizar el título')
+  } finally {
+    editingId.value = null
+    quizToEdit.value = null
+  }
+}
+
+const cancelEdit = () => {
+  quizToEdit.value = null
 }
 
 const getDifficultyIcon = (difficulty: string) => {
@@ -271,10 +309,20 @@ const formatDate = (dateString: string) => {
                 Realizar quiz
               </button>
               <button
+                @click="promptEditQuiz(quiz)"
+                :disabled="editingId === quiz.id"
+                class="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                :class="{ 'opacity-50 cursor-not-allowed': editingId === quiz.id }"
+                title="Editar título"
+              >
+                ✏️
+              </button>
+              <button
                 @click="promptDeleteQuiz(quiz.id)"
                 :disabled="deletingId === quiz.id"
                 class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 :class="{ 'opacity-50 cursor-not-allowed': deletingId === quiz.id }"
+                title="Eliminar quiz"
               >
                 🗑️
               </button>
@@ -283,6 +331,18 @@ const formatDate = (dateString: string) => {
         </div>
       </div>
     </div>
+
+    <!-- Edit Title Modal -->
+    <EditTitleModal
+      :show="showEditModal"
+      :current-title="quizToEdit?.title || ''"
+      title="Editar título del quiz"
+      confirm-text="Guardar"
+      cancel-text="Cancelar"
+      @confirm="confirmEditQuiz"
+      @cancel="cancelEdit"
+      @close="showEditModal = false"
+    />
 
     <!-- Confirm Delete Modal -->
     <ConfirmModal

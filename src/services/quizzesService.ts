@@ -247,6 +247,29 @@ export class QuizzesService {
   }
 
   /**
+   * Actualiza el título de un quiz
+   */
+  async updateQuizTitle(quizId: string, userId: string, newTitle: string): Promise<void> {
+    // Verificar que el quiz pertenece al usuario
+    const { data: quiz } = await supabase
+      .from('quizzes')
+      .select('user_id')
+      .eq('id', quizId)
+      .single()
+
+    if (!quiz || quiz.user_id !== userId) {
+      throw new Error('Quiz no encontrado o sin permisos')
+    }
+
+    const { error } = await supabase
+      .from('quizzes')
+      .update({ title: newTitle })
+      .eq('id', quizId)
+
+    if (error) throw error
+  }
+
+  /**
    * Elimina un quiz
    */
   async deleteQuiz(quizId: string, userId: string): Promise<void> {
