@@ -133,60 +133,118 @@ const generateQuiz = async () => {
 
 <template>
   <AppLayout>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-2">Crear Nuevo Quiz</h1>
-        <p class="text-gray-600">Sube documentos o selecciona de tu biblioteca</p>
+    <div class="max-w-5xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
+      <!-- Header con progreso - Mobile First -->
+      <div class="mb-6 sm:mb-8">
+        <router-link to="/dashboard" class="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium mb-3 sm:mb-4 inline-flex items-center">
+          ← Volver
+        </router-link>
+        <h1 class="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 mt-3 sm:mt-4">Crear Nuevo Quiz</h1>
+        <p class="text-gray-600 text-xs sm:text-sm md:text-base">Sigue los pasos para generar tu quiz</p>
+
+        <!-- Progress Steps - Mobile First -->
+        <div class="flex items-center justify-center mt-4 sm:mt-6 gap-1.5 sm:gap-2 md:gap-4">
+          <div class="flex items-center">
+            <div :class="quizTitle.trim().length > 0 ? 'bg-green-500' : 'bg-blue-500'" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+              {{ quizTitle.trim().length > 0 ? '✓' : '1' }}
+            </div>
+            <span class="ml-1 sm:ml-2 text-xs font-medium hidden sm:inline">Título</span>
+          </div>
+          <div class="w-6 sm:w-8 md:w-16 h-0.5 bg-gray-300"></div>
+          <div class="flex items-center">
+            <div :class="(selectedDocumentIds.length > 0 || newFiles.length > 0) ? 'bg-green-500' : 'bg-gray-300'" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+              {{ (selectedDocumentIds.length > 0 || newFiles.length > 0) ? '✓' : '2' }}
+            </div>
+            <span class="ml-1 sm:ml-2 text-xs font-medium hidden sm:inline">Docs</span>
+          </div>
+          <div class="w-6 sm:w-8 md:w-16 h-0.5 bg-gray-300"></div>
+          <div class="flex items-center">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+              3
+            </div>
+            <span class="ml-1 sm:ml-2 text-xs font-medium hidden sm:inline">Generar</span>
+          </div>
+        </div>
       </div>
 
-      <div class="space-y-6">
-        <!-- Quiz Title -->
-        <div class="card">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Título del Quiz *
-          </label>
-          <input
-            v-model="quizTitle"
-            type="text"
-            placeholder="Ej: Quiz de Biología - Fotosíntesis"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div class="space-y-4 sm:space-y-6">
+        <!-- PASO 1: Quiz Title - Mobile First -->
+        <div class="card border-2 p-3 sm:p-6" :class="quizTitle.trim().length > 0 ? 'border-green-300 bg-green-50' : 'border-blue-300 bg-blue-50'">
+          <div class="flex items-start gap-2 sm:gap-3">
+            <div class="flex-shrink-0">
+              <div :class="quizTitle.trim().length > 0 ? 'bg-green-500' : 'bg-blue-500'" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full text-white flex items-center justify-center font-bold text-sm sm:text-base">
+                {{ quizTitle.trim().length > 0 ? '✓' : '1' }}
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-base sm:text-xl font-bold mb-1 sm:mb-2">Ponle un nombre a tu quiz</h2>
+              <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+                Usa un nombre descriptivo
+              </p>
+              <input
+                v-model="quizTitle"
+                type="text"
+                placeholder="Ej: Quiz de Biología"
+                class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base md:text-lg"
+              />
+              <p v-if="quizTitle.trim().length > 0" class="text-xs sm:text-sm text-green-600 mt-2 font-medium">
+                ✓ ¡Perfecto! Ahora agrega documentos
+              </p>
+            </div>
+          </div>
         </div>
 
-        <!-- Document Sources -->
-        <div class="card">
-          <h2 class="text-xl font-bold mb-4">Fuentes de Contenido</h2>
+        <!-- PASO 2: Document Sources - Mobile First -->
+        <div class="card border-2 p-3 sm:p-6" :class="(selectedDocumentIds.length > 0 || newFiles.length > 0) ? 'border-green-300 bg-green-50' : 'border-gray-300'">
+          <div class="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div class="flex-shrink-0">
+              <div :class="(selectedDocumentIds.length > 0 || newFiles.length > 0) ? 'bg-green-500' : 'bg-gray-400'" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full text-white flex items-center justify-center font-bold text-sm sm:text-base">
+                {{ (selectedDocumentIds.length > 0 || newFiles.length > 0) ? '✓' : '2' }}
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-base sm:text-xl font-bold mb-1 sm:mb-2">Selecciona documentos</h2>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Sube archivos o elige de tu biblioteca
+              </p>
+            </div>
+          </div>
 
-          <!-- Tabs -->
-          <div class="flex space-x-2 mb-6 border-b border-gray-200">
+          <!-- Tabs - Mobile First -->
+          <div class="flex space-x-1 sm:space-x-2 mb-4 sm:mb-6 border-b border-gray-200">
             <button
               @click="activeTab = 'upload'"
-              class="px-4 py-2 font-medium transition-colors border-b-2"
+              class="px-2 py-2 sm:px-4 font-medium transition-colors border-b-2 relative text-xs sm:text-sm flex-1 sm:flex-none"
               :class="[
                 activeTab === 'upload'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               ]"
             >
-              📤 Subir Nuevos
+              <span class="hidden sm:inline">📤 </span>Subir
+              <span v-if="newFiles.length > 0" class="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                {{ newFiles.length }}
+              </span>
             </button>
             <button
               @click="activeTab = 'library'"
-              class="px-4 py-2 font-medium transition-colors border-b-2"
+              class="px-2 py-2 sm:px-4 font-medium transition-colors border-b-2 relative text-xs sm:text-sm flex-1 sm:flex-none"
               :class="[
                 activeTab === 'library'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               ]"
             >
-              📚 Mi Biblioteca
+              <span class="hidden sm:inline">📚 </span>Biblioteca
+              <span v-if="selectedDocumentIds.length > 0" class="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                {{ selectedDocumentIds.length }}
+              </span>
             </button>
           </div>
 
-          <!-- Upload Tab -->
-          <div v-if="activeTab === 'upload'" class="space-y-4">
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+          <!-- Upload Tab - Mobile First -->
+          <div v-if="activeTab === 'upload'" class="space-y-3 sm:space-y-4">
+            <div class="border-2 border-dashed border-blue-300 rounded-lg p-6 sm:p-8 md:p-12 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group">
               <input
                 type="file"
                 id="fileInput"
@@ -196,10 +254,11 @@ const generateQuiz = async () => {
                 class="hidden"
               />
               <label for="fileInput" class="cursor-pointer">
-                <div class="text-4xl mb-3">📁</div>
-                <p class="text-gray-700 font-medium mb-1">Haz clic para seleccionar archivos</p>
-                <p class="text-sm text-gray-500">PDF, JPG o PNG · Máximo 10MB por archivo</p>
-                <p class="text-xs text-gray-400 mt-2">Puedes seleccionar múltiples archivos</p>
+                <div class="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4 group-hover:scale-110 transition-transform">📁</div>
+                <p class="text-gray-900 font-bold mb-1 sm:mb-2 text-base sm:text-lg">Arrastra archivos aquí</p>
+                <p class="text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">o toca para seleccionar</p>
+                <p class="text-xs sm:text-sm text-gray-500">PDF, JPG o PNG · Max 10MB</p>
+                <p class="text-xs text-blue-600 mt-2 sm:mt-3 font-medium">✓ Múltiples archivos a la vez</p>
               </label>
             </div>
 
@@ -236,36 +295,53 @@ const generateQuiz = async () => {
           </div>
         </div>
 
-        <!-- Quiz Configuration -->
-        <div class="card">
-          <h2 class="text-xl font-bold mb-4">Configuración del Quiz</h2>
+        <!-- Quiz Configuration - Mobile First -->
+        <div class="card border-2 border-gray-300 p-3 sm:p-6">
+          <div class="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div class="flex-shrink-0">
+              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-sm sm:text-base">
+                ⚙️
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-base sm:text-xl font-bold mb-1 sm:mb-2">Configuración</h2>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Personaliza tu quiz
+              </p>
+            </div>
+          </div>
 
-          <div class="grid sm:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Dificultad
               </label>
               <select
                 v-model="difficulty"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
               >
-                <option value="easy">Fácil</option>
-                <option value="medium">Medio</option>
-                <option value="hard">Difícil</option>
+                <option value="easy">😊 Fácil</option>
+                <option value="medium">🎯 Medio</option>
+                <option value="hard">🔥 Difícil</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Número de Preguntas
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Preguntas ({{ numQuestions }})
               </label>
               <input
                 v-model.number="numQuestions"
-                type="number"
+                type="range"
                 min="5"
                 max="50"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                step="5"
+                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
               />
+              <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <span>5</span>
+                <span>50</span>
+              </div>
             </div>
           </div>
         </div>
@@ -283,22 +359,32 @@ const generateQuiz = async () => {
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex justify-between items-center">
+        <!-- PASO 3: Generate - Mobile First -->
+        <div v-if="canGenerate" class="card border-2 border-green-300 bg-gradient-to-br from-green-50 to-blue-50 p-4 sm:p-6">
+          <div class="text-center py-2 sm:py-4">
+            <div class="text-4xl sm:text-5xl mb-3 sm:mb-4">🚀</div>
+            <h2 class="text-xl sm:text-2xl font-bold mb-2">¡Todo listo!</h2>
+            <p class="text-gray-600 mb-4 sm:mb-6 text-xs sm:text-sm md:text-base px-2">
+              La IA creará {{ numQuestions }} preguntas {{ difficulty === 'easy' ? 'fáciles' : difficulty === 'medium' ? 'medias' : 'difíciles' }}
+            </p>
+            <button
+              @click="generateQuiz"
+              :disabled="generating"
+              class="btn btn-primary w-full sm:w-auto text-base sm:text-lg px-6 py-3 sm:px-10 sm:py-4 transform hover:scale-105 transition-all shadow-lg"
+              :class="{ 'opacity-50 cursor-not-allowed': generating }"
+            >
+              {{ generating ? 'Generando...' : '✨ Generar Quiz' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Help/Cancel - Mobile First -->
+        <div v-else class="text-center py-2">
           <button
             @click="router.push('/dashboard')"
-            class="btn btn-secondary"
+            class="text-gray-600 hover:text-gray-900 font-medium text-sm"
           >
-            Cancelar
-          </button>
-
-          <button
-            @click="generateQuiz"
-            :disabled="!canGenerate || generating"
-            class="btn btn-primary"
-            :class="{ 'opacity-50 cursor-not-allowed': !canGenerate || generating }"
-          >
-            {{ generating ? 'Generando...' : 'Generar Quiz con IA 🚀' }}
+            ← Volver
           </button>
         </div>
       </div>

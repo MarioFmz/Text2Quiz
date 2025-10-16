@@ -36,40 +36,56 @@ const closeMobileMenu = () => {
           </router-link>
 
           <!-- Desktop Navigation -->
-          <nav v-if="user" class="hidden md:flex items-center space-x-6">
+          <nav v-if="user" class="hidden md:flex items-center space-x-1 lg:space-x-4">
             <router-link
-              to="/quizzes"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+              to="/dashboard"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
             >
-              📝 Mis Quizzes
-            </router-link>
-            <router-link
-              to="/my-challenges"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            >
-              🏆 Mis Desafíos
-            </router-link>
-            <router-link
-              to="/documents"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            >
-              Documentos
-            </router-link>
-            <router-link
-              to="/profile"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            >
-              👤 Perfil
+              🏠 Inicio
             </router-link>
             <router-link
               to="/create-quiz"
-              class="btn btn-primary text-sm"
+              class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium shadow-md hover:shadow-lg"
+              active-class="from-blue-600 to-purple-700 shadow-lg ring-2 ring-blue-300"
             >
               ✨ Crear Quiz
             </router-link>
+            <router-link
+              to="/quizzes"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              📚 Mis Quizzes
+            </router-link>
+            <router-link
+              to="/my-challenges"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              🏆 Desafíos
+            </router-link>
+            <router-link
+              to="/documents"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              📄 Documentos
+            </router-link>
+
+            <!-- Separator -->
+            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+
+            <router-link
+              to="/profile"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              active-class="bg-gray-100 text-gray-900"
+            >
+              👤
+            </router-link>
             <button
               @click="handleLogout"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+              class="px-3 py-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors text-sm font-medium"
             >
               Salir
             </button>
@@ -123,19 +139,39 @@ const closeMobileMenu = () => {
 
       <!-- Mobile menu -->
       <Transition name="slide">
-        <div v-if="user && mobileMenuOpen" class="md:hidden border-t border-gray-200 bg-white">
+        <div v-if="user && mobileMenuOpen" class="md:hidden border-t border-gray-200 bg-white shadow-lg">
           <div class="px-4 py-3 space-y-1">
+            <!-- Primary CTA -->
+            <router-link
+              to="/create-quiz"
+              @click="closeMobileMenu"
+              class="block px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium text-center mb-3 shadow-md"
+            >
+              ✨ Crear Nuevo Quiz
+            </router-link>
+
+            <!-- Navigation -->
+            <router-link
+              to="/dashboard"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
+            >
+              🏠 Inicio
+            </router-link>
             <router-link
               to="/quizzes"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
             >
-              📝 Mis Quizzes
+              📚 Mis Quizzes
             </router-link>
             <router-link
               to="/my-challenges"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
             >
               🏆 Mis Desafíos
             </router-link>
@@ -143,26 +179,25 @@ const closeMobileMenu = () => {
               to="/documents"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
             >
-              Documentos
+              📄 Documentos
             </router-link>
+
+            <!-- Divider -->
+            <div class="h-px bg-gray-200 my-2"></div>
+
             <router-link
               to="/profile"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              active-class="bg-gray-100 text-gray-900 font-semibold"
             >
               👤 Perfil
             </router-link>
-            <router-link
-              to="/create-quiz"
-              @click="closeMobileMenu"
-              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              ✨ Crear Quiz
-            </router-link>
             <button
               @click="handleLogout"
-              class="w-full text-left px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+              class="w-full text-left px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium"
             >
               Salir
             </button>

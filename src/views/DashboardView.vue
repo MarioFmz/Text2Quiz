@@ -43,6 +43,9 @@ onMounted(async () => {
 
     // Load user challenges
     await loadMyChallenges()
+
+    // Load streak
+    await loadUserStreak()
   }
 })
 
@@ -73,8 +76,7 @@ const loadUserStreak = async () => {
     // TODO: Load user streak from API
     userStreak.value = {
       current_streak: 0,
-      longest_streak: 0,
-      last_completed_date: null
+      longest_streak: 0
     }
   } catch (error) {
     console.error('Error loading streak:', error)
@@ -258,217 +260,321 @@ const copyToClipboard = async (url: string) => {
     console.error('Error copying:', error)
   }
 }
+
+// Computed properties for better UX
+const greetingTime = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Buenos días'
+  if (hour < 20) return 'Buenas tardes'
+  return 'Buenas noches'
+})
+
+const userName = computed(() => user.value?.email?.split('@')[0] || 'Usuario')
 </script>
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <!-- Header -->
-      <div class="mb-8 sm:mb-12">
-        <h1 class="text-3xl sm:text-4xl font-bold mb-2">Dashboard</h1>
-        <p class="text-gray-600">Bienvenido, {{ user?.email?.split('@')[0] || 'Usuario' }}</p>
-      </div>
+    <div class="max-w-7xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
 
-      <!-- BIENVENIDA - Cuando NO hay quizzes -->
-      <div v-if="!loading && stats.totalQuizzes === 0 && practiceMode === 'dashboard'" class="mb-10 sm:mb-12">
-        <div class="card bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 p-8 sm:p-12 text-center">
-          <div class="text-6xl sm:text-8xl mb-6 animate-bounce">✨</div>
-          <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-gray-900">
-            ¡Bienvenido a Text2Quiz!
-          </h2>
-          <p class="text-lg text-gray-700 mb-6 max-w-2xl mx-auto">
-            Transforma tus documentos en quizzes interactivos con IA.
-            Empieza creando tu primer quiz ahora.
-          </p>
+      <!-- ============================================ -->
+      <!-- DASHBOARD VIEW (No práctica activa) -->
+      <!-- ============================================ -->
+      <div v-if="practiceMode === 'dashboard'">
 
-          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-            <router-link
-              to="/create-quiz"
-              class="btn btn-primary text-lg px-8 py-4 transform hover:scale-105 transition-all"
-            >
-              ✨ Crear Mi Primer Quiz
-            </router-link>
-          </div>
-
-          <div class="grid sm:grid-cols-3 gap-6 mt-8 text-left max-w-3xl mx-auto">
-            <div class="bg-white rounded-lg p-4 shadow-sm">
-              <div class="text-3xl mb-2">🤖</div>
-              <h3 class="font-bold mb-1">1. IA Genera Quiz</h3>
-              <p class="text-sm text-gray-600">Crea quizzes automáticamente desde tus documentos</p>
-            </div>
-            <div class="bg-white rounded-lg p-4 shadow-sm">
-              <div class="text-3xl mb-2">🎯</div>
-              <h3 class="font-bold mb-1">2. Practica y Mejora</h3>
-              <p class="text-sm text-gray-600">Aprende con retroalimentación al instante</p>
-            </div>
-            <div class="bg-white rounded-lg p-4 shadow-sm">
-              <div class="text-3xl mb-2">🏆</div>
-              <h3 class="font-bold mb-1">3. Compite con Amigos</h3>
-              <p class="text-sm text-gray-600">Comparte desafíos y compara resultados</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PRÁCTICA RÁPIDA - Solo cuando SÍ hay quizzes -->
-      <div v-else-if="!loading && stats.totalQuizzes > 0 && practiceMode === 'dashboard'" class="mb-10 sm:mb-12">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold flex items-center space-x-2">
-            <span class="text-3xl">⚡</span>
-            <span>Práctica Rápida</span>
-          </h2>
-          <div v-if="userStreak.current_streak > 0" class="flex items-center space-x-2 bg-orange-50 px-3 sm:px-4 py-2 rounded-lg">
-            <span class="text-xl sm:text-2xl">🔥</span>
-            <span class="font-bold text-orange-600 text-sm sm:text-base">{{ userStreak.current_streak }} días</span>
-          </div>
+        <!-- HEADER MEJORADO - Mobile First -->
+        <div class="mb-4 sm:mb-8">
+          <h1 class="text-xl sm:text-2xl md:text-3xl font-bold mb-1">
+            {{ greetingTime }}, {{ userName }}
+          </h1>
+          <p class="text-gray-500 text-xs sm:text-sm md:text-base">¿Qué quieres aprender hoy?</p>
         </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <!-- Daily Challenge - MÁS DESTACADO -->
-          <button
-            @click="startDailyChallenge"
-            class="card hover:shadow-2xl transition-all text-left p-6 border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50 relative transform hover:scale-105"
-          >
-            <div class="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-              HOY
-            </div>
-            <div class="text-5xl sm:text-6xl mb-4">🌟</div>
-            <h3 class="text-xl sm:text-2xl font-bold mb-2 text-purple-900">Desafío Diario</h3>
-            <p class="text-sm text-gray-700 mb-4 font-medium">
-              ¡Mantén tu racha activa!
-            </p>
-            <div class="flex items-center space-x-2 text-xs text-gray-600">
-              <span>🔥</span>
-              <span>10 preguntas · 5 min</span>
-            </div>
-          </button>
+        <!-- ============================================ -->
+        <!-- ESTADO: NUEVO USUARIO (Sin quizzes) -->
+        <!-- ============================================ -->
+        <div v-if="!loading && stats.totalQuizzes === 0">
 
-          <!-- Quiz Express -->
-          <button
-            @click="startQuizExpress"
-            class="card hover:shadow-xl transition-all text-left p-6 border-2 border-transparent hover:border-green-300"
-          >
-            <div class="text-4xl sm:text-5xl mb-4">⚡</div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2">Quiz Express</h3>
-            <p class="text-sm text-gray-600 mb-4">
-              Quiz rápido de 5 preguntas
-            </p>
-            <div class="flex items-center space-x-2 text-xs text-gray-500">
-              <span>⏱️</span>
-              <span>2-3 minutos</span>
-            </div>
-          </button>
-
-          <!-- Flash Cards -->
-          <button
-            @click="startFlashCards"
-            class="card hover:shadow-xl transition-all text-left p-6 border-2 border-transparent hover:border-blue-300"
-          >
-            <div class="text-4xl sm:text-5xl mb-4">🎴</div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2">Flash Cards</h3>
-            <p class="text-sm text-gray-600 mb-4">
-              Repasa conceptos clave
-            </p>
-            <div class="flex items-center space-x-2 text-xs text-gray-500">
-              <span>📊</span>
-              <span>20 tarjetas</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. MIS DESAFÍOS - SOLO SI TIENE DESAFÍOS -->
-      <div v-if="!loadingChallenges && myChallenges.length > 0 && practiceMode === 'dashboard'" class="mb-10 sm:mb-12">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold flex items-center space-x-2">
-            <span class="text-3xl">🏆</span>
-            <span>Mis Desafíos</span>
-          </h2>
-          <router-link
-            to="/my-challenges"
-            class="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Ver todos →
-          </router-link>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div
-            v-for="challenge in myChallenges"
-            :key="challenge.id"
-            class="card hover:shadow-lg transition-shadow"
-          >
-            <div class="mb-4">
-              <h3 class="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
-                {{ challenge.quiz_title }}
-              </h3>
-              <div class="text-xs text-gray-500">
-                Compartido hace {{ Math.floor((Date.now() - new Date(challenge.created_at).getTime()) / (1000 * 60 * 60 * 24)) }} días
+          <!-- HERO SECTION - Mobile First -->
+          <div class="card bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-0.5 sm:p-1 mb-6 sm:mb-8">
+            <div class="bg-white rounded-lg p-4 sm:p-8 md:p-12">
+              <div class="text-center mb-6 sm:mb-8">
+                <div class="text-5xl sm:text-6xl md:text-7xl mb-3 sm:mb-4 animate-bounce">🚀</div>
+                <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mb-2 sm:mb-3 text-gray-900 px-2">
+                  ¡Bienvenido a Text2Quiz!
+                </h2>
+                <p class="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-4">
+                  Transforma tus apuntes en quizzes interactivos en segundos.
+                  La IA hará el trabajo pesado por ti.
+                </p>
               </div>
-            </div>
 
-            <!-- Stats -->
-            <div class="grid grid-cols-3 gap-2 mb-4">
-              <div class="bg-blue-50 rounded-lg p-2 text-center">
-                <div class="text-lg font-bold text-blue-600">{{ challenge.total_attempts }}</div>
-                <div class="text-xs text-gray-600">Intentos</div>
+              <!-- CTA Principal - Mobile Optimized -->
+              <div class="flex justify-center mb-6 sm:mb-10 px-4">
+                <router-link
+                  to="/create-quiz"
+                  class="btn btn-primary w-full sm:w-auto text-base sm:text-lg px-6 py-4 sm:px-10 sm:py-5 transform hover:scale-105 transition-all shadow-xl hover:shadow-2xl"
+                >
+                  <span class="text-xl sm:text-2xl mr-2">✨</span>
+                  Crear Mi Primer Quiz
+                </router-link>
               </div>
-              <div class="bg-green-50 rounded-lg p-2 text-center">
-                <div class="text-lg font-bold text-green-600">{{ challenge.best_score }}%</div>
-                <div class="text-xs text-gray-600">Mejor</div>
-              </div>
-              <div class="bg-orange-50 rounded-lg p-2 text-center">
-                <div class="text-lg font-bold text-orange-600">
-                  {{ challenge.creator_rank ? `#${challenge.creator_rank}` : '-' }}
+
+              <!-- Pasos visuales - Mobile First -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto">
+                <div class="text-center p-3 sm:p-0">
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                    <span class="text-lg sm:text-xl font-bold text-blue-600">1</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl mb-1 sm:mb-2">📄</div>
+                  <h3 class="font-bold mb-1 text-sm sm:text-base text-gray-900">Sube tu material</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">PDFs, imágenes o documentos</p>
                 </div>
-                <div class="text-xs text-gray-600">Tu Pos</div>
+
+                <div class="text-center p-3 sm:p-0">
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                    <span class="text-lg sm:text-xl font-bold text-purple-600">2</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl mb-1 sm:mb-2">🤖</div>
+                  <h3 class="font-bold mb-1 text-sm sm:text-base text-gray-900">La IA trabaja</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Genera preguntas automáticamente</p>
+                </div>
+
+                <div class="text-center p-3 sm:p-0">
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                    <span class="text-lg sm:text-xl font-bold text-pink-600">3</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl mb-1 sm:mb-2">🎯</div>
+                  <h3 class="font-bold mb-1 text-sm sm:text-base text-gray-900">Practica y domina</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Aprende con feedback instantáneo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Features Preview - Mobile First -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div class="card hover:shadow-lg transition-shadow p-4 sm:p-6">
+              <div class="text-3xl sm:text-4xl mb-2 sm:mb-3">⚡</div>
+              <h3 class="font-bold text-base sm:text-lg mb-1 sm:mb-2">Práctica Rápida</h3>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Sesiones de 2-5 minutos para repasar cuando quieras
+              </p>
+            </div>
+
+            <div class="card hover:shadow-lg transition-shadow p-4 sm:p-6">
+              <div class="text-3xl sm:text-4xl mb-2 sm:mb-3">🔥</div>
+              <h3 class="font-bold text-base sm:text-lg mb-1 sm:mb-2">Desafío Diario</h3>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Mantén tu racha y aprende algo nuevo cada día
+              </p>
+            </div>
+
+            <div class="card hover:shadow-lg transition-shadow p-4 sm:p-6">
+              <div class="text-3xl sm:text-4xl mb-2 sm:mb-3">🏆</div>
+              <h3 class="font-bold text-base sm:text-lg mb-1 sm:mb-2">Compite</h3>
+              <p class="text-xs sm:text-sm text-gray-600">
+                Comparte desafíos y reta a tus amigos
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ESTADO: USUARIO ACTIVO (Con quizzes) -->
+        <!-- ============================================ -->
+        <div v-else-if="!loading && stats.totalQuizzes > 0">
+
+          <!-- FILA PRINCIPAL: Desafío Diario + Quick Actions (2 columnas en desktop) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-10">
+
+            <!-- COLUMNA IZQUIERDA: Desafío Diario - Streak Focused -->
+            <div class="card hover:shadow-2xl transition-all p-4 sm:p-6 bg-gradient-to-br from-orange-50 via-white to-purple-50">
+
+              <!-- Streak como protagonista -->
+              <div class="text-center mb-4">
+                <div v-if="userStreak.current_streak > 0" class="inline-block">
+                  <div class="text-6xl sm:text-7xl mb-2 animate-pulse">🔥</div>
+                  <div class="text-4xl sm:text-5xl font-black text-orange-600 mb-1">{{ userStreak.current_streak }}</div>
+                  <div class="text-sm font-bold text-orange-700 uppercase tracking-wider">Día{{ userStreak.current_streak > 1 ? 's' : '' }} de racha</div>
+                  <div class="text-xs text-gray-500 mt-2">Récord personal: {{ userStreak.longest_streak }} días</div>
+                </div>
+                <div v-else class="inline-block">
+                  <div class="text-6xl sm:text-7xl mb-2">🌟</div>
+                  <div class="text-2xl sm:text-3xl font-bold text-gray-800">¡Empieza tu racha!</div>
+                </div>
+              </div>
+
+              <!-- Desafío info (secundario) -->
+              <div class="bg-white/60 backdrop-blur-sm rounded-lg p-3 sm:p-4 mb-4">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1 flex items-center justify-center gap-2">
+                  <span class="text-xl">🎯</span>
+                  <span>Desafío Diario</span>
+                </h3>
+                <p class="text-xs sm:text-sm text-gray-600 text-center">
+                  10 preguntas · ~5 minutos
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              <button
+                @click="startDailyChallenge"
+                class="btn btn-primary w-full text-sm sm:text-base px-6 py-3 sm:py-4 transform hover:scale-105 transition-all shadow-lg hover:shadow-xl font-bold"
+              >
+                {{ userStreak.current_streak > 0 ? '¡Mantén tu racha!' : '¡Empezar ahora!' }}
+              </button>
+            </div>
+
+            <!-- COLUMNA DERECHA: Quick Actions -->
+            <div>
+              <h2 class="text-base sm:text-lg font-bold mb-3 text-gray-700 px-1">Acciones rápidas</h2>
+              <div class="grid grid-cols-2 gap-2 sm:gap-3">
+
+                <!-- Crear Quiz - Mobile First -->
+                <router-link
+                  to="/create-quiz"
+                  class="card hover:shadow-xl transition-all text-center p-3 sm:p-4 border-2 border-transparent hover:border-blue-300 group"
+                >
+                  <div class="text-3xl sm:text-4xl mb-2 group-hover:scale-110 transition-transform">✨</div>
+                  <h3 class="font-bold text-xs sm:text-sm mb-0.5">Crear Quiz</h3>
+                  <p class="text-xs text-gray-600 hidden sm:block">Nuevo</p>
+                </router-link>
+
+                <!-- Mis Quizzes - Mobile First -->
+                <router-link
+                  to="/quizzes"
+                  class="card hover:shadow-xl transition-all text-center p-3 sm:p-4 border-2 border-transparent hover:border-green-300 group"
+                >
+                  <div class="text-3xl sm:text-4xl mb-2 group-hover:scale-110 transition-transform">📚</div>
+                  <h3 class="font-bold text-xs sm:text-sm mb-0.5">Mis Quizzes</h3>
+                  <p class="text-xs text-gray-600">{{ stats.totalQuizzes }}</p>
+                </router-link>
+
+                <!-- Quiz Express - Mobile First -->
+                <button
+                  @click="startQuizExpress"
+                  class="card hover:shadow-xl transition-all text-center p-3 sm:p-4 border-2 border-transparent hover:border-yellow-300 group"
+                >
+                  <div class="text-3xl sm:text-4xl mb-2 group-hover:scale-110 transition-transform">⚡</div>
+                  <h3 class="font-bold text-xs sm:text-sm mb-0.5">Quiz Express</h3>
+                  <p class="text-xs text-gray-600 hidden sm:block">5 preguntas</p>
+                </button>
+
+                <!-- Flash Cards - Mobile First -->
+                <button
+                  @click="startFlashCards"
+                  class="card hover:shadow-xl transition-all text-center p-3 sm:p-4 border-2 border-transparent hover:border-purple-300 group"
+                >
+                  <div class="text-3xl sm:text-4xl mb-2 group-hover:scale-110 transition-transform">🎴</div>
+                  <h3 class="font-bold text-xs sm:text-sm mb-0.5">Flash Cards</h3>
+                  <p class="text-xs text-gray-600 hidden sm:block">Repaso</p>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA 3: MIS DESAFÍOS - Full Width -->
+          <div class="mb-6 sm:mb-10">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2 text-gray-700 px-1">
+                <span class="text-2xl">🏆</span>
+                <span>Mis Desafíos</span>
+              </h2>
+              <router-link
+                v-if="myChallenges.length > 0"
+                to="/my-challenges"
+                class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Ver todos →
+              </router-link>
+            </div>
+
+            <!-- Si tiene desafíos -->
+            <div v-if="!loadingChallenges && myChallenges.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div
+                v-for="challenge in myChallenges"
+                :key="challenge.id"
+                class="card hover:shadow-lg transition-shadow p-4 sm:p-5"
+              >
+                <div class="mb-3">
+                  <h3 class="font-bold text-base sm:text-lg text-gray-900 mb-1 line-clamp-2">
+                    {{ challenge.quiz_title }}
+                  </h3>
+                  <div class="text-xs text-gray-500">
+                    Hace {{ Math.floor((Date.now() - new Date(challenge.created_at).getTime()) / (1000 * 60 * 60 * 24)) }} días
+                  </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                  <div class="bg-blue-50 rounded-lg p-2 text-center">
+                    <div class="text-base sm:text-lg font-bold text-blue-600">{{ challenge.total_attempts }}</div>
+                    <div class="text-xs text-gray-600">Intentos</div>
+                  </div>
+                  <div class="bg-green-50 rounded-lg p-2 text-center">
+                    <div class="text-base sm:text-lg font-bold text-green-600">{{ challenge.best_score }}%</div>
+                    <div class="text-xs text-gray-600">Mejor</div>
+                  </div>
+                  <div class="bg-orange-50 rounded-lg p-2 text-center">
+                    <div class="text-base sm:text-lg font-bold text-orange-600">
+                      {{ challenge.creator_rank ? `#${challenge.creator_rank}` : '-' }}
+                    </div>
+                    <div class="text-xs text-gray-600">Pos</div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                  <button
+                    @click="copyToClipboard(getShareUrl(challenge.share_slug))"
+                    class="btn btn-secondary flex-1 text-xs py-2"
+                  >
+                    📋
+                  </button>
+                  <button
+                    @click="router.push(`/challenge/${challenge.share_slug}`)"
+                    class="btn btn-primary flex-1 text-xs py-2"
+                  >
+                    Ver
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Actions -->
-            <div class="flex space-x-2">
-              <button
-                @click="copyToClipboard(getShareUrl(challenge.share_slug))"
-                class="btn btn-secondary flex-1 text-xs sm:text-sm py-2"
+            <!-- Si NO tiene desafíos - CTA para crear -->
+            <div v-else-if="!loadingChallenges" class="card p-6 sm:p-8 text-center bg-gradient-to-br from-blue-50 to-purple-50">
+              <div class="text-5xl sm:text-6xl mb-4">🏆</div>
+              <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">¿Listo para competir?</h3>
+              <p class="text-sm sm:text-base text-gray-600 mb-6 max-w-md mx-auto">
+                Completa un quiz y comparte el desafío con tus amigos para ver quién obtiene la mejor puntuación
+              </p>
+              <router-link
+                to="/quizzes"
+                class="btn btn-primary inline-flex items-center gap-2 px-6 py-3"
               >
-                📋 Copiar
-              </button>
-              <button
-                @click="router.push(`/challenge/${challenge.share_slug}`)"
-                class="btn btn-primary flex-1 text-xs sm:text-sm py-2"
-              >
-                Ver
-              </button>
+                <span>🎯</span>
+                <span>Ir a mis quizzes</span>
+              </router-link>
+            </div>
+
+            <!-- Loading state -->
+            <div v-else class="text-center py-8">
+              <p class="text-sm text-gray-500">Cargando desafíos...</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 3. ESTADÍSTICAS - Solo cuando hay quizzes -->
-      <div v-if="!loading && stats.totalQuizzes > 0 && practiceMode === 'dashboard'">
-        <h2 class="text-xl font-bold mb-4 text-gray-700">Tus estadísticas</h2>
-        <div class="grid grid-cols-3 gap-3 sm:gap-4">
-          <div class="card bg-gray-50 text-center py-4">
-            <div class="text-2xl mb-1">📚</div>
-            <div class="text-2xl font-bold mb-1">{{ stats.totalDocuments }}</div>
-            <div class="text-xs text-gray-600">Documentos</div>
-          </div>
-
-          <div class="card bg-gray-50 text-center py-4">
-            <div class="text-2xl mb-1">✅</div>
-            <div class="text-2xl font-bold mb-1">{{ stats.totalQuizzes }}</div>
-            <div class="text-xs text-gray-600">Quizzes</div>
-          </div>
-
-          <div class="card bg-gray-50 text-center py-4">
-            <div class="text-2xl mb-1">📈</div>
-            <div class="text-2xl font-bold mb-1">{{ stats.averageAccuracy }}%</div>
-            <div class="text-xs text-gray-600">Precisión</div>
+        <!-- Loading state -->
+        <div v-else-if="loading" class="flex items-center justify-center py-20">
+          <div class="text-center">
+            <div class="text-6xl mb-4 animate-bounce">📚</div>
+            <p class="text-gray-600">Cargando tu dashboard...</p>
           </div>
         </div>
       </div>
 
-      <!-- PRACTICE MODES -->
+      <!-- ============================================ -->
+      <!-- PRACTICE MODES (Igual que antes) -->
+      <!-- ============================================ -->
 
       <!-- Flash Cards Mode -->
       <div v-if="practiceMode === 'flashcards' && !showResults" class="space-y-6">

@@ -397,134 +397,202 @@ const triggerConfetti = () => {
 
       <!-- Summary View -->
       <div v-else-if="showSummary && quiz" class="space-y-4 sm:space-y-6">
-        <!-- Creator View Header -->
-        <div v-if="isCreator" class="bg-gradient-to-r from-orange-500 to-yellow-600 text-white rounded-lg p-6 sm:p-8 text-center">
-          <div class="text-4xl mb-3">👑</div>
-          <h1 class="text-2xl sm:text-3xl font-bold mb-2">Tu Desafío</h1>
-          <p class="text-orange-100">Esta es la vista de estadísticas de tu desafío</p>
-        </div>
+        <!-- Hero Section - Más impactante y dramático -->
+        <div class="relative overflow-hidden rounded-xl sm:rounded-2xl">
+          <!-- Background con gradiente -->
+          <div class="absolute inset-0 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600"></div>
+          <div class="absolute inset-0 bg-black/10"></div>
 
-        <!-- Participant View Header -->
-        <div v-else class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6 sm:p-8 text-center">
-          <div class="text-4xl mb-3">🎯</div>
-          <h1 class="text-2xl sm:text-3xl font-bold mb-2">Desafío de Quiz</h1>
-          <p class="text-blue-100">¡Te han retado a completar este quiz!</p>
-        </div>
+          <!-- Contenido -->
+          <div class="relative p-6 sm:p-10 text-white text-center">
+            <!-- Badge de "Desafío" -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-bold mb-4 border border-white/30">
+              <span class="text-xl">⚔️</span>
+              <span>DESAFÍO ACTIVO</span>
+            </div>
 
-        <div class="card">
-          <div class="flex items-center space-x-3 mb-4">
-            <span class="text-2xl">📚</span>
-            <h2 class="text-lg sm:text-xl font-bold">{{ quiz.title }}</h2>
+            <!-- Título del Quiz -->
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3 drop-shadow-lg">
+              {{ quiz.title }}
+            </h1>
+
+            <!-- Mensaje motivacional -->
+            <p v-if="isCreator" class="text-base sm:text-lg text-white/90 mb-6 max-w-2xl mx-auto">
+              👑 Este es tu desafío. <strong>{{ challenge.participants_count }}</strong> personas han aceptado el reto
+            </p>
+            <p v-else class="text-base sm:text-lg text-white/90 mb-6 max-w-2xl mx-auto">
+              ¿Tienes lo necesario para superar este desafío?
+            </p>
+
+            <!-- Stats principales - Mobile First -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-6 max-w-3xl mx-auto">
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20">
+                <div class="text-2xl sm:text-3xl md:text-4xl font-black mb-1">{{ questions.length }}</div>
+                <div class="text-xs sm:text-sm text-white/80 font-medium">Preguntas</div>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20">
+                <div class="text-2xl sm:text-3xl md:text-4xl font-black mb-1">{{ challenge.participants_count }}</div>
+                <div class="text-xs sm:text-sm text-white/80 font-medium">Retadores</div>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20">
+                <div class="text-base sm:text-xl md:text-2xl font-black mb-1">
+                  {{ quiz.difficulty === 'easy' ? '🟢' : quiz.difficulty === 'medium' ? '🟡' : '🔴' }}
+                </div>
+                <div class="text-xs sm:text-sm text-white/80 font-medium">
+                  {{ quiz.difficulty === 'easy' ? 'Fácil' : quiz.difficulty === 'medium' ? 'Medio' : 'Difícil' }}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
+        <!-- Resumen y Documentos (si hay) -->
+        <div v-if="quiz.summary || documents.length > 0" class="card">
           <div v-if="quiz.summary" class="mb-6">
-            <h3 class="text-sm font-semibold text-gray-900 mb-2">📋 Resumen</h3>
-            <p class="text-sm sm:text-base text-gray-700 whitespace-pre-line">{{ quiz.summary }}</p>
+            <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span class="text-lg">📋</span>
+              <span>Sobre este desafío</span>
+            </h3>
+            <p class="text-sm sm:text-base text-gray-600 leading-relaxed">{{ quiz.summary }}</p>
           </div>
 
           <!-- Document Links -->
-          <div v-if="documents.length > 0" class="mb-6">
-            <h3 class="text-sm font-semibold text-gray-900 mb-2">📄 Documentos de referencia</h3>
+          <div v-if="documents.length > 0">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <span class="text-lg">📎</span>
+              <span>Material de referencia</span>
+            </h3>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="doc in documents"
                 :key="doc.id"
                 @click="viewDocument(doc.file_url)"
-                class="btn btn-secondary text-xs sm:text-sm flex items-center space-x-1"
+                class="btn btn-secondary text-xs sm:text-sm flex items-center gap-2 hover:scale-105 transition-transform"
               >
-                <span>📎</span>
+                <span>📄</span>
                 <span>{{ doc.title }}</span>
               </button>
             </div>
           </div>
+        </div>
 
-          <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 p-3 sm:p-6 bg-gray-50 rounded-lg">
-            <div class="text-center">
-              <div class="text-xl sm:text-2xl font-bold text-gray-900">{{ questions.length }}</div>
-              <div class="text-xs sm:text-sm text-gray-600">Preguntas</div>
-            </div>
-            <div class="text-center">
-              <div class="text-base sm:text-xl font-bold text-gray-900">
-                {{ quiz.difficulty === 'easy' ? 'Fácil' : quiz.difficulty === 'medium' ? 'Medio' : 'Difícil' }}
+        <!-- Score del Creador - Tipo "Boss Battle" -->
+        <div v-if="creatorAttempt" class="relative overflow-hidden rounded-xl sm:rounded-2xl">
+          <!-- Background gradient -->
+          <div class="absolute inset-0 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500"></div>
+          <div class="absolute inset-0 bg-black/5"></div>
+
+          <div class="relative p-5 sm:p-6">
+            <!-- Badge -->
+            <div class="flex justify-center mb-4">
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-orange-900 border border-orange-300">
+                <span>👑</span>
+                <span>OBJETIVO A SUPERAR</span>
               </div>
-              <div class="text-xs sm:text-sm text-gray-600">Dificultad</div>
             </div>
-            <div class="text-center">
-              <div class="text-xl sm:text-2xl font-bold text-gray-900">{{ challenge.participants_count }}</div>
-              <div class="text-xs sm:text-sm text-gray-600">Participantes</div>
-            </div>
-          </div>
 
-          <!-- Start Quiz Button - For everyone -->
-          <div>
-            <button
-              @click="startQuiz"
-              :disabled="!username.trim()"
-              class="btn btn-primary w-full"
-              :class="{ 'opacity-50 cursor-not-allowed': !username.trim() }"
-            >
-              {{ startButtonText }}
-            </button>
-            <p v-if="username" class="text-xs text-gray-500 mt-2 text-center">
-              Participando como: <strong>{{ username }}</strong>
-            </p>
+            <!-- Versus Layout -->
+            <div class="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border-2 border-white/50">
+              <div class="text-center mb-4">
+                <p class="text-sm text-gray-600 mb-2">Creado por</p>
+                <h3 class="text-xl sm:text-2xl font-black text-gray-900">{{ creatorAttempt.username }}</h3>
+              </div>
+
+              <!-- Score prominente -->
+              <div class="flex items-center justify-center gap-4 sm:gap-6 mb-4">
+                <div class="text-center">
+                  <div class="text-5xl sm:text-6xl font-black bg-gradient-to-br from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2">
+                    {{ creatorAttempt.percentage }}%
+                  </div>
+                  <div class="text-xs sm:text-sm text-gray-600">
+                    {{ creatorAttempt.score }}/{{ creatorAttempt.total_questions }} correctas
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tiempo -->
+              <div class="flex justify-center gap-2 items-center py-2 px-4 bg-gray-50 rounded-lg inline-flex mx-auto">
+                <span class="text-xl">⏱️</span>
+                <span class="text-sm font-bold text-gray-700">
+                  {{ Math.floor(creatorAttempt.time_taken / 60) }}:{{ (creatorAttempt.time_taken % 60).toString().padStart(2, '0') }} min
+                </span>
+              </div>
+
+              <!-- Call to action -->
+              <div class="mt-6 pt-4 border-t-2 border-dashed border-gray-300">
+                <p class="text-center text-base sm:text-lg font-bold text-gray-900">
+                  ¿Puedes conseguir un mejor resultado? 🔥
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Creator Challenge Banner -->
-        <div v-if="creatorAttempt" class="card bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200">
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <div class="flex items-center space-x-2 mb-2">
-                <span class="text-2xl">👑</span>
-                <h3 class="text-lg font-bold text-orange-900">Desafío del Creador</h3>
-              </div>
-              <p class="text-sm text-gray-700 mb-1">
-                <strong>{{ creatorAttempt.username }}</strong> completó este quiz con:
-              </p>
-              <div class="flex items-center space-x-4 mt-2">
-                <div>
-                  <span class="text-2xl font-bold text-orange-600">{{ creatorAttempt.percentage }}%</span>
-                  <span class="text-xs text-gray-600 ml-1">
-                    ({{ creatorAttempt.score }}/{{ creatorAttempt.total_questions }})
-                  </span>
-                </div>
-                <div class="text-sm text-gray-600">
-                  ⏱️ {{ Math.floor(creatorAttempt.time_taken / 60) }}:{{ (creatorAttempt.time_taken % 60).toString().padStart(2, '0') }} min
-                </div>
-              </div>
+        <!-- Leaderboard Preview - Tipo Podio -->
+        <div v-if="leaderboard.length > 0" class="card bg-gradient-to-br from-slate-50 to-gray-100">
+          <h3 class="text-base sm:text-lg font-bold mb-4 flex items-center gap-2">
+            <span class="text-2xl">🏆</span>
+            <span>Top 3 Mejores Puntuaciones</span>
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- 1st Place -->
+            <div v-if="leaderboard[0]"
+                 class="order-1 sm:order-2 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-4 text-center transform sm:scale-110 border-4 border-yellow-300 shadow-xl">
+              <div class="text-4xl mb-2">🥇</div>
+              <div class="font-black text-white text-lg mb-1 truncate">{{ leaderboard[0].username }}</div>
+              <div class="text-3xl font-black text-white mb-1">{{ leaderboard[0].percentage }}%</div>
+              <div class="text-xs text-yellow-100">{{ leaderboard[0].score }}/{{ leaderboard[0].total_questions }}</div>
             </div>
-            <div class="text-center ml-4">
-              <div class="text-4xl">
-                {{ creatorAttempt.percentage >= 90 ? '🏆' : creatorAttempt.percentage >= 70 ? '🎯' : '📚' }}
-              </div>
+
+            <!-- 2nd Place -->
+            <div v-if="leaderboard[1]"
+                 class="order-2 sm:order-1 bg-gradient-to-br from-gray-300 to-gray-400 rounded-xl p-4 text-center border-2 border-gray-400 shadow-lg">
+              <div class="text-3xl mb-2">🥈</div>
+              <div class="font-bold text-gray-800 mb-1 truncate">{{ leaderboard[1].username }}</div>
+              <div class="text-2xl font-bold text-gray-800 mb-1">{{ leaderboard[1].percentage }}%</div>
+              <div class="text-xs text-gray-600">{{ leaderboard[1].score }}/{{ leaderboard[1].total_questions }}</div>
+            </div>
+
+            <!-- 3rd Place -->
+            <div v-if="leaderboard[2]"
+                 class="order-3 bg-gradient-to-br from-orange-400 to-amber-600 rounded-xl p-4 text-center border-2 border-orange-400 shadow-lg">
+              <div class="text-3xl mb-2">🥉</div>
+              <div class="font-bold text-white mb-1 truncate">{{ leaderboard[2].username }}</div>
+              <div class="text-2xl font-bold text-white mb-1">{{ leaderboard[2].percentage }}%</div>
+              <div class="text-xs text-orange-100">{{ leaderboard[2].score }}/{{ leaderboard[2].total_questions }}</div>
             </div>
           </div>
-          <div class="mt-3 pt-3 border-t border-orange-200">
-            <p class="text-sm font-semibold text-orange-800 text-center">
-              ¿Puedes superarlo?
-            </p>
-          </div>
+
+          <p v-if="leaderboard.length > 3" class="text-center text-xs text-gray-500 mt-4">
+            ... y {{ leaderboard.length - 3 }} retador{{ leaderboard.length - 3 > 1 ? 'es' : '' }} más
+          </p>
         </div>
 
-        <div class="card">
-          <!-- Current Leaderboard Preview -->
-          <div v-if="leaderboard.length > 0">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">🏆 Top 3 actual</h3>
-            <div class="space-y-2">
-              <div
-                v-for="(entry, index) in leaderboard.slice(0, 3)"
-                :key="entry.id"
-                class="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm"
-              >
-                <div class="flex items-center space-x-2">
-                  <span>{{ getRankEmoji(index + 1) }}</span>
-                  <span>{{ entry.username }}</span>
-                </div>
-                <span class="font-semibold">{{ entry.percentage }}%</span>
-              </div>
-            </div>
+        <!-- CTA Principal - Super Prominente -->
+        <div class="card bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 p-6 sm:p-8">
+          <div class="text-center mb-6">
+            <h3 class="text-xl sm:text-2xl font-black text-gray-900 mb-2">
+              {{ hasCompletedBefore ? '¿Listo para mejorar tu puntuación?' : '¿Aceptas el desafío?' }}
+            </h3>
+            <p class="text-sm sm:text-base text-gray-600">
+              {{ hasCompletedBefore ? 'Intenta superar tu récord anterior' : 'Demuestra lo que sabes y sube al ranking' }}
+            </p>
           </div>
+
+          <button
+            @click="startQuiz"
+            :disabled="!username.trim()"
+            class="btn btn-primary w-full text-base sm:text-lg py-4 sm:py-5 font-bold transform hover:scale-105 transition-all shadow-xl hover:shadow-2xl disabled:transform-none disabled:hover:scale-100"
+            :class="{ 'opacity-50 cursor-not-allowed': !username.trim() }"
+          >
+            <span class="text-xl mr-2">🚀</span>
+            {{ startButtonText }}
+          </button>
+
+          <p v-if="username" class="text-xs sm:text-sm text-gray-500 mt-3 text-center">
+            Participando como: <strong class="text-blue-600">{{ username }}</strong>
+          </p>
         </div>
       </div>
 
