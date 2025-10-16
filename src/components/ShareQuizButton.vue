@@ -17,7 +17,6 @@ const props = defineProps<Props>()
 const showModal = ref(false)
 const loading = ref(false)
 const shareUrl = ref('')
-const shareCode = ref('')
 const copied = ref(false)
 const creatorPercentage = ref(props.creatorScore !== undefined ? Math.round((props.creatorScore / props.totalQuestions) * 100) : 0)
 
@@ -46,7 +45,6 @@ const generateShareLink = async () => {
     }
 
     const data = await response.json()
-    shareCode.value = data.share_code
     shareUrl.value = `${window.location.origin}/challenge/${data.share_slug}`
     showModal.value = true
   } catch (error) {
@@ -134,31 +132,6 @@ const closeModal = () => {
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-600 mb-1">Quiz a compartir:</p>
                 <p class="font-semibold text-gray-900">{{ quizTitle }}</p>
-              </div>
-
-              <!-- Share Code -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Código de acceso
-                </label>
-                <div class="flex space-x-2">
-                  <input
-                    :value="shareCode"
-                    readonly
-                    class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg font-mono text-lg text-center"
-                  />
-                  <button
-                    @click="copyToClipboard(shareCode)"
-                    class="px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors"
-                    :class="{ 'bg-green-100 border-green-300': copied }"
-                  >
-                    <span v-if="copied">✓</span>
-                    <span v-else>📋</span>
-                  </button>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">
-                  Comparte este código con tus amigos para que puedan acceder al quiz
-                </p>
               </div>
 
               <!-- Share URL -->

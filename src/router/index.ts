@@ -33,9 +33,21 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/create-quiz',
+    name: 'create-quiz',
+    component: () => import('@/views/CreateQuizView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/documents',
     name: 'documents',
     component: () => import('@/views/DocumentsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/quizzes',
+    name: 'quizzes',
+    component: () => import('@/views/QuizzesView.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -60,6 +72,12 @@ const routes: RouteRecordRaw[] = [
     path: '/my-challenges',
     name: 'my-challenges',
     component: () => import('@/views/MyChallengesView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/ProfileView.vue'),
     meta: { requiresAuth: true }
   }
 ]

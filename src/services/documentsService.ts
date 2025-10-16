@@ -41,10 +41,9 @@ export class DocumentsService {
 
       if (uploadError) throw uploadError
 
-      // 3. Obtener URL pública
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(uploadData.path)
+      // 3. Guardar solo el path (no la URL firmada, se generará cuando se necesite)
+      // Las URLs firmadas expiran, así que guardamos el path y generamos URLs bajo demanda
+      const filePath = uploadData.path
 
       // 4. Procesar documento para extraer texto
       console.log('Processing file:', file.name, file.type)
@@ -58,13 +57,13 @@ export class DocumentsService {
         throw new Error('No se pudo extraer texto del documento')
       }
 
-      // 5. Crear registro en la base de datos
+      // 5. Crear registro en la base de datos (guardamos el path, no la URL)
       const { data: document, error: dbError } = await supabase
         .from('documents')
         .insert({
           user_id: userId,
           title: file.name,
-          file_url: urlData.publicUrl,
+          file_url: filePath, // Guardamos el path, no la URL
           file_type: file.type === 'application/pdf' ? 'pdf' : 'image',
           processed_status: 'completed',
           extracted_text: processed.text
@@ -118,19 +117,33 @@ export class DocumentsService {
   }
 
   /**
+   * Genera una URL firmada temporal para acceder a un documento
+   * La URL expira después de 1 hora por defecto
+   */
+  async getSignedUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(filePath, expiresIn)
+
+    if (error) throw error
+    if (!data?.signedUrl) throw new Error('No se pudo generar URL firmada')
+
+    return data.signedUrl
+  }
+
+  /**
    * Elimina un documento
    */
   async deleteDocument(documentId: string, userId: string): Promise<void> {
-    // 1. Obtener documento para acceder a file_url
+    // 1. Obtener documento para acceder a file_url (que ahora es el path)
     const document = await this.getDocument(documentId)
     if (!document || document.user_id !== userId) {
       throw new Error('Documento no encontrado o sin permisos')
     }
 
-    // 2. Eliminar archivo de Storage
-    const filePath = document.file_url.split('/documents/')[1]
-    if (filePath) {
-      await supabase.storage.from('documents').remove([filePath])
+    // 2. Eliminar archivo de Storage usando el path directamente
+    if (document.file_url) {
+      await supabase.storage.from('documents').remove([document.file_url])
     }
 
     // 3. Eliminar registro de BD (esto eliminará en cascada quizzes, preguntas, etc.)

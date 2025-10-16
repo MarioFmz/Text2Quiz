@@ -78,8 +78,49 @@ const copyToClipboard = async (url: string) => {
         <p class="text-gray-600">Bienvenido, {{ user?.email?.split('@')[0] || 'Usuario' }}</p>
       </div>
 
-      <!-- 1. PRÁCTICA RÁPIDA - PRIORIDAD MÁXIMA -->
-      <div class="mb-10 sm:mb-12">
+      <!-- BIENVENIDA - Cuando NO hay quizzes -->
+      <div v-if="!loading && stats.totalQuizzes === 0" class="mb-10 sm:mb-12">
+        <div class="card bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 p-8 sm:p-12 text-center">
+          <div class="text-6xl sm:text-8xl mb-6 animate-bounce">✨</div>
+          <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-gray-900">
+            ¡Bienvenido a Text2Quiz!
+          </h2>
+          <p class="text-lg text-gray-700 mb-6 max-w-2xl mx-auto">
+            Transforma tus documentos en quizzes interactivos con IA.
+            Empieza creando tu primer quiz ahora.
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <router-link
+              to="/create-quiz"
+              class="btn btn-primary text-lg px-8 py-4 transform hover:scale-105 transition-all"
+            >
+              ✨ Crear Mi Primer Quiz
+            </router-link>
+          </div>
+
+          <div class="grid sm:grid-cols-3 gap-6 mt-8 text-left max-w-3xl mx-auto">
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+              <div class="text-3xl mb-2">🤖</div>
+              <h3 class="font-bold mb-1">1. IA Genera Quiz</h3>
+              <p class="text-sm text-gray-600">Crea quizzes automáticamente desde tus documentos</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+              <div class="text-3xl mb-2">🎯</div>
+              <h3 class="font-bold mb-1">2. Practica y Mejora</h3>
+              <p class="text-sm text-gray-600">Aprende con retroalimentación al instante</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+              <div class="text-3xl mb-2">🏆</div>
+              <h3 class="font-bold mb-1">3. Compite con Amigos</h3>
+              <p class="text-sm text-gray-600">Comparte desafíos y compara resultados</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRÁCTICA RÁPIDA - Solo cuando SÍ hay quizzes -->
+      <div v-else-if="!loading && stats.totalQuizzes > 0" class="mb-10 sm:mb-12">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-bold flex items-center space-x-2">
             <span class="text-3xl">⚡</span>
@@ -212,34 +253,8 @@ const copyToClipboard = async (url: string) => {
         </div>
       </div>
 
-      <!-- 3. ACCIONES RÁPIDAS -->
-      <div class="mb-10 sm:mb-12">
-        <h2 class="text-2xl font-bold mb-6">Acciones rápidas</h2>
-        <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
-          <router-link to="/upload" class="card hover:shadow-md transition-shadow">
-            <div class="flex items-center space-x-4">
-              <div class="text-4xl">📤</div>
-              <div>
-                <h3 class="text-lg sm:text-xl font-semibold mb-1">Subir documento</h3>
-                <p class="text-sm text-gray-600">Sube un PDF o imagen para generar un quiz</p>
-              </div>
-            </div>
-          </router-link>
-
-          <router-link to="/documents" class="card hover:shadow-md transition-shadow">
-            <div class="flex items-center space-x-4">
-              <div class="text-4xl">📁</div>
-              <div>
-                <h3 class="text-lg sm:text-xl font-semibold mb-1">Mis documentos</h3>
-                <p class="text-sm text-gray-600">Ver todos tus documentos y quizzes</p>
-              </div>
-            </div>
-          </router-link>
-        </div>
-      </div>
-
-      <!-- 4. ESTADÍSTICAS - MENOS PROMINENTE -->
-      <div v-if="!loading">
+      <!-- 3. ESTADÍSTICAS - Solo cuando hay quizzes -->
+      <div v-if="!loading && stats.totalQuizzes > 0">
         <h2 class="text-xl font-bold mb-4 text-gray-700">Tus estadísticas</h2>
         <div class="grid grid-cols-3 gap-3 sm:gap-4">
           <div class="card bg-gray-50 text-center py-4">

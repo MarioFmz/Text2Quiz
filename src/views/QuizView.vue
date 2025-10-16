@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
 import ShareQuizButton from '@/components/ShareQuizButton.vue'
+import ShareResultsButtons from '@/components/ShareResultsButtons.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
@@ -24,6 +25,9 @@ const submitting = ref(false)
 const previousAttempts = ref<any[]>([])
 const quizStartTime = ref<number>(0)
 const quizTimeTaken = ref<number>(0)
+const expandedAttemptId = ref<string | null>(null)
+const attemptAnswers = ref<Record<string, any>>({})
+const loadingAttempt = ref<string | null>(null)
 
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const progress = computed(() => ((currentQuestionIndex.value + 1) / questions.value.length) * 100)
@@ -146,6 +150,42 @@ const formatDate = (dateString: string) => {
     minute: '2-digit'
   })
 }
+
+const toggleAttemptDetails = async (attemptId: string, attemptCompletedAt: string) => {
+  if (expandedAttemptId.value === attemptId) {
+    expandedAttemptId.value = null
+    return
+  }
+
+  expandedAttemptId.value = attemptId
+
+  // Si ya tenemos las respuestas cargadas, no volver a cargarlas
+  if (attemptAnswers.value[attemptId]) return
+
+  // Cargar las respuestas de este intento
+  if (!user.value) return
+
+  try {
+    loadingAttempt.value = attemptId
+    const answers = await quizzesService.getAttemptAnswers(user.value.id, quizId, attemptCompletedAt)
+
+    // Convertir array a mapa question_id -> respuesta
+    const answersMap: Record<string, any> = {}
+    answers.forEach(answer => {
+      answersMap[answer.question_id] = answer
+    })
+
+    attemptAnswers.value[attemptId] = answersMap
+  } catch (error) {
+    console.error('Error loading attempt answers:', error)
+  } finally {
+    loadingAttempt.value = null
+  }
+}
+
+const getQuestionForId = (questionId: string) => {
+  return questions.value.find(q => q.id === questionId)
+}
 </script>
 
 <template>
@@ -200,6 +240,19 @@ const formatDate = (dateString: string) => {
             </button>
           </div>
         </div>
+
+        <!-- Share Results on Social Media -->
+        <ShareResultsButtons
+          v-if="quiz && user"
+          :quiz-id="quiz.id"
+          :quiz-title="quiz.title"
+          :score="calculateResults().correct"
+          :total-questions="questions.length"
+          :percentage="calculateResults().percentage"
+          :creator-id="user.id"
+          :creator-username="user.email?.split('@')[0] || 'Usuario'"
+          :time-taken="quizTimeTaken"
+        />
 
         <!-- Revisión de respuestas -->
         <div class="space-y-4">
@@ -286,33 +339,95 @@ const formatDate = (dateString: string) => {
             <h2 class="text-base sm:text-lg md:text-xl font-bold">Intentos anteriores</h2>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-4">
             <div
               v-for="(attempt, index) in previousAttempts"
               :key="attempt.id"
-              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              class="bg-gray-50 rounded-lg overflow-hidden"
             >
-              <div class="flex items-center space-x-4">
-                <div class="text-center">
-                  <div class="text-2xl font-bold" :class="attempt.score / attempt.total_questions >= 0.7 ? 'text-green-600' : 'text-orange-600'">
-                    {{ Math.round((attempt.score / attempt.total_questions) * 100) }}%
+              <!-- Attempt Header -->
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-4">
+                    <div class="text-center">
+                      <div class="text-2xl font-bold" :class="attempt.score / attempt.total_questions >= 0.7 ? 'text-green-600' : 'text-orange-600'">
+                        {{ Math.round((attempt.score / attempt.total_questions) * 100) }}%
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ attempt.score }}/{{ attempt.total_questions }}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">
+                        Intento #{{ previousAttempts.length - index }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ formatDate(attempt.completed_at) }}
+                      </div>
+                    </div>
                   </div>
-                  <div class="text-xs text-gray-500">
-                    {{ attempt.score }}/{{ attempt.total_questions }}
+                  <div class="text-2xl">
+                    {{ attempt.score / attempt.total_questions >= 0.9 ? '🏆' : attempt.score / attempt.total_questions >= 0.7 ? '✅' : '📝' }}
                   </div>
                 </div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">
-                    Intento #{{ previousAttempts.length - index }}
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ formatDate(attempt.completed_at) }}
-                  </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    @click="toggleAttemptDetails(attempt.id, attempt.completed_at)"
+                    class="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1"
+                  >
+                    <span>{{ expandedAttemptId === attempt.id ? '👁️ Ocultar' : '🔍 Ver' }} detalles</span>
+                  </button>
                 </div>
               </div>
-              <div class="text-2xl">
-                {{ attempt.score / attempt.total_questions >= 0.9 ? '🏆' : attempt.score / attempt.total_questions >= 0.7 ? '✅' : '📝' }}
+
+              <!-- Share Buttons (shown when expanded) -->
+              <div v-if="expandedAttemptId === attempt.id" class="px-4 pb-2">
+                <ShareResultsButtons
+                  v-if="quiz && user"
+                  :quiz-id="quiz.id"
+                  :quiz-title="quiz.title"
+                  :score="attempt.score"
+                  :total-questions="attempt.total_questions"
+                  :percentage="Math.round((attempt.score / attempt.total_questions) * 100)"
+                  :creator-id="user.id"
+                  :creator-username="user.email?.split('@')[0] || 'Usuario'"
+                  :time-taken="attempt.time_taken || 0"
+                />
               </div>
+
+              <!-- Attempt Details (expandable) -->
+              <Transition name="expand">
+                <div v-if="expandedAttemptId === attempt.id" class="border-t border-gray-200">
+                  <div v-if="loadingAttempt === attempt.id" class="p-4 text-center text-gray-600">
+                    Cargando respuestas...
+                  </div>
+                  <div v-else-if="attemptAnswers[attempt.id]" class="p-4 space-y-3">
+                    <h4 class="font-semibold text-sm mb-3">Revisión de respuestas:</h4>
+                    <div
+                      v-for="(question, qIndex) in questions"
+                      :key="question.id"
+                      class="text-sm bg-white p-3 rounded-lg"
+                    >
+                      <div class="flex items-start gap-2">
+                        <span class="text-lg flex-shrink-0">
+                          {{ attemptAnswers[attempt.id][question.id]?.is_correct ? '✅' : '❌' }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <p class="font-medium mb-1">{{ qIndex + 1 }}. {{ question.question_text }}</p>
+                          <p class="text-xs text-gray-600 mb-1">
+                            <strong>Tu respuesta:</strong> {{ attemptAnswers[attempt.id][question.id]?.selected_answer || 'Sin responder' }}
+                          </p>
+                          <p class="text-xs text-green-700">
+                            <strong>Respuesta correcta:</strong> {{ question.correct_answer }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
             </div>
           </div>
         </div>
@@ -393,3 +508,18 @@ const formatDate = (dateString: string) => {
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+</style>

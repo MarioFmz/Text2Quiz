@@ -82,7 +82,10 @@ const handleSubmit = async () => {
 
           <p class="text-center text-gray-600 mt-6">
             ¿No tienes cuenta?
-            <router-link to="/register" class="text-gray-900 font-medium hover:underline">
+            <router-link
+              :to="route.query.redirect ? `/register?redirect=${encodeURIComponent(route.query.redirect as string)}` : '/register'"
+              class="text-gray-900 font-medium hover:underline"
+            >
               Regístrate
             </router-link>
           </p>

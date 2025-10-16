@@ -175,6 +175,133 @@ app.post('/api/generate-quiz', async (req, res) => {
   }
 });
 
+// Generate quiz from multiple documents
+app.post('/api/quizzes/create-from-multiple', async (req, res) => {
+  try {
+    const { userId, title, documentIds, numQuestions = 10, difficulty = 'medium' } = req.body;
+
+    if (!userId || !title || !documentIds || documentIds.length === 0) {
+      return res.status(400).json({ error: 'userId, title, and documentIds are required' });
+    }
+
+    console.log(`Creating quiz from ${documentIds.length} document(s)...`);
+    console.log(`Quiz title: ${title}`);
+
+    // Get all documents
+    const { data: documents, error: docsError } = await supabase
+      .from('documents')
+      .select('*')
+      .in('id', documentIds);
+
+    if (docsError || !documents || documents.length === 0) {
+      return res.status(404).json({ error: 'Documents not found' });
+    }
+
+    // Combine all extracted text
+    let combinedText = '';
+    const documentTitles = [];
+
+    for (const doc of documents) {
+      if (doc.extracted_text) {
+        combinedText += `\n\n=== ${doc.title} ===\n\n${doc.extracted_text}`;
+        documentTitles.push(doc.title);
+      }
+    }
+
+    if (!combinedText.trim()) {
+      return res.status(400).json({ error: 'No text found in documents' });
+    }
+
+    console.log(`Combined text from: ${documentTitles.join(', ')}`);
+    console.log(`Total combined text length: ${combinedText.length} characters`);
+
+    // Generate quiz with OpenAI
+    const prompt = buildQuizPrompt(combinedText, numQuestions, difficulty);
+
+    console.log('Calling OpenAI API...');
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un experto en educación que crea quizzes educativos de alta calidad. Debes generar preguntas que ayuden a evaluar la comprensión profunda del material. Siempre responde con JSON válido.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.7
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const generatedQuiz = JSON.parse(content);
+    console.log(`Quiz generated: ${generatedQuiz.questions.length} questions`);
+
+    // Save quiz to database (without document_id, using new model)
+    const { data: savedQuiz, error: quizError } = await supabase
+      .from('quizzes')
+      .insert({
+        user_id: userId,
+        title: title, // Use user-provided title
+        difficulty: generatedQuiz.difficulty,
+        total_questions: generatedQuiz.questions.length,
+        summary: generatedQuiz.summary || 'Repasa los conceptos clave antes de comenzar el quiz.',
+        combined_content: combinedText // Store combined content
+      })
+      .select()
+      .single();
+
+    if (quizError) throw quizError;
+
+    // Create quiz_documents relationships
+    const quizDocuments = documentIds.map(docId => ({
+      quiz_id: savedQuiz.id,
+      document_id: docId
+    }));
+
+    const { error: relError } = await supabase
+      .from('quiz_documents')
+      .insert(quizDocuments);
+
+    if (relError) throw relError;
+
+    // Save questions
+    const questionsToInsert = generatedQuiz.questions.map((q, index) => ({
+      quiz_id: savedQuiz.id,
+      question_text: q.question_text,
+      question_type: q.question_type,
+      correct_answer: q.correct_answer,
+      options: q.options,
+      explanation: q.explanation,
+      order: index + 1
+    }));
+
+    const { error: questionsError } = await supabase
+      .from('questions')
+      .insert(questionsToInsert);
+
+    if (questionsError) throw questionsError;
+
+    console.log('Quiz saved successfully with multiple document links');
+
+    res.json({
+      success: true,
+      quiz: savedQuiz,
+      documentCount: documentIds.length
+    });
+  } catch (error) {
+    console.error('Error creating quiz from multiple documents:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 function buildQuizPrompt(text, numQuestions, difficulty) {
   return `
 Analiza el siguiente texto y genera un quiz educativo de alta calidad en español.
@@ -429,9 +556,85 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
       })
     );
 
+    // También obtener challenges en los que el usuario ha participado (pero no creó)
+    const { data: participatedAttempts, error: attemptsError } = await supabase
+      .from('challenge_attempts')
+      .select(`
+        challenge_id,
+        score,
+        total_questions,
+        completed_at,
+        quiz_challenges!inner (
+          id,
+          quiz_id,
+          creator_id,
+          share_slug,
+          created_at,
+          quizzes (
+            title
+          )
+        )
+      `)
+      .eq('user_id', userId)
+      .order('completed_at', { ascending: false });
+
+    if (attemptsError) {
+      console.error('Error loading participated challenges:', attemptsError);
+    } else {
+      console.log(`Found ${participatedAttempts?.length || 0} participated attempts for user ${userId}`);
+    }
+
+    // Procesar challenges participados (sin duplicados de los creados)
+    const createdChallengeIds = new Set(challengesWithStats.map(c => c.id));
+    const participatedChallenges = [];
+
+    if (participatedAttempts) {
+      const uniqueChallenges = new Map();
+
+      for (const attempt of participatedAttempts) {
+        const challenge = attempt.quiz_challenges;
+        console.log(`Processing attempt: challenge=${challenge?.id}, creator=${challenge?.creator_id}, userId=${userId}`);
+        // Filtrar: no incluir si el usuario es el creador O si ya está en los creados
+        if (challenge && challenge.creator_id !== userId && !createdChallengeIds.has(challenge.id)) {
+          console.log(`✓ Challenge ${challenge.id} passed filter`);
+
+          if (!uniqueChallenges.has(challenge.id)) {
+            const percentage = Math.round((attempt.score / attempt.total_questions) * 100);
+
+            uniqueChallenges.set(challenge.id, {
+              id: challenge.id,
+              quiz_id: challenge.quiz_id,
+              quiz_title: challenge.quizzes?.title || 'Quiz sin título',
+              share_slug: challenge.share_slug,
+              created_at: attempt.completed_at,
+              is_active: true,
+              is_participant: true, // Marca como participante, no creador
+              user_score: percentage,
+              user_attempts: 1
+            });
+          } else {
+            // Actualizar con la mejor puntuación
+            const existing = uniqueChallenges.get(challenge.id);
+            const newPercentage = Math.round((attempt.score / attempt.total_questions) * 100);
+            if (newPercentage > existing.user_score) {
+              existing.user_score = newPercentage;
+            }
+            existing.user_attempts++;
+          }
+        } else {
+          console.log(`✗ Challenge filtered out: creator=${challenge?.creator_id === userId}, alreadyCreated=${challenge ? createdChallengeIds.has(challenge.id) : 'no challenge'}`);
+        }
+      }
+
+      participatedChallenges.push(...uniqueChallenges.values());
+    }
+
+    console.log(`Returning: ${challengesWithStats.length} created, ${participatedChallenges.length} participated`);
+
     res.json({
       success: true,
-      challenges: challengesWithStats
+      challenges: challengesWithStats,
+      participated: participatedChallenges
     });
   } catch (error) {
     console.error('Error getting my challenges:', error);
@@ -453,7 +656,9 @@ app.get('/api/challenges/:identifier', async (req, res) => {
           id,
           title,
           difficulty,
-          total_questions
+          total_questions,
+          summary,
+          document_id
         )
       `)
       .or(`share_code.eq.${identifier},share_slug.eq.${identifier}`)
@@ -461,6 +666,48 @@ app.get('/api/challenges/:identifier', async (req, res) => {
 
     if (challengeError || !challenge) {
       return res.status(404).json({ error: 'Challenge not found' });
+    }
+
+    // Obtener las preguntas del quiz
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('quiz_id', challenge.quiz_id);
+
+    if (questionsError) throw questionsError;
+
+    // Obtener documentos asociados
+    const documents = [];
+
+    // 1. Legacy: documento directo del quiz
+    if (challenge.quizzes.document_id) {
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('id, title, file_url')
+        .eq('id', challenge.quizzes.document_id)
+        .single();
+
+      if (doc) documents.push(doc);
+    }
+
+    // 2. Nuevo: documentos de la tabla quiz_documents
+    const { data: quizDocs } = await supabase
+      .from('quiz_documents')
+      .select(`
+        documents (
+          id,
+          title,
+          file_url
+        )
+      `)
+      .eq('quiz_id', challenge.quiz_id);
+
+    if (quizDocs) {
+      for (const qd of quizDocs) {
+        if (qd.documents && !documents.find(d => d.id === qd.documents.id)) {
+          documents.push(qd.documents);
+        }
+      }
     }
 
     // Incrementar views
@@ -471,7 +718,10 @@ app.get('/api/challenges/:identifier', async (req, res) => {
 
     res.json({
       success: true,
-      challenge
+      challenge,
+      quiz: challenge.quizzes,
+      questions: questions || [],
+      documents: documents
     });
   } catch (error) {
     console.error('Error getting challenge:', error);
@@ -559,6 +809,92 @@ app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
     });
   } catch (error) {
     console.error('Error saving attempt:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// USER PROFILE ENDPOINTS
+// ============================================
+
+// Get user profile
+app.get('/api/profile/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      profile
+    });
+  } catch (error) {
+    console.error('Error getting profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user profile
+app.put('/api/profile/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { first_name, last_name, display_name, avatar_url, bio } = req.body;
+
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .update({
+        first_name,
+        last_name,
+        display_name,
+        avatar_url,
+        bio
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      profile
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Change password endpoint
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Note: Supabase password change requires admin API
+    // This is a simplified version - in production you'd want to use Supabase Auth properly
+    const { data, error } = await supabase.auth.admin.updateUserById(
+      userId,
+      { password: newPassword }
+    );
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
     res.status(500).json({ error: error.message });
   }
 });

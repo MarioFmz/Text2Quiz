@@ -118,8 +118,15 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const viewDocument = (fileUrl: string) => {
-  window.open(fileUrl, '_blank')
+const viewDocument = async (filePath: string) => {
+  try {
+    // Generar URL firmada temporal (válida por 1 hora)
+    const signedUrl = await documentsService.getSignedUrl(filePath)
+    window.open(signedUrl, '_blank')
+  } catch (e: any) {
+    error.value = 'Error al generar acceso al documento'
+    console.error('Error getting signed URL:', e)
+  }
 }
 </script>
 

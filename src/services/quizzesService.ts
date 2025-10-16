@@ -33,16 +33,50 @@ export class QuizzesService {
 
   /**
    * Obtiene todos los quizzes de un documento
+   * Incluye tanto quizzes legacy (con document_id) como multi-documento (quiz_documents)
    */
   async getDocumentQuizzes(documentId: string): Promise<Quiz[]> {
-    const { data, error } = await supabase
+    // 1. Obtener quizzes legacy con document_id directo
+    const { data: legacyQuizzes, error: legacyError } = await supabase
       .from('quizzes')
       .select('*')
       .eq('document_id', documentId)
       .order('generated_at', { ascending: false })
 
-    if (error) throw error
-    return data || []
+    if (legacyError) throw legacyError
+
+    // 2. Obtener quiz IDs desde la tabla quiz_documents
+    const { data: quizDocuments, error: quizDocsError } = await supabase
+      .from('quiz_documents')
+      .select('quiz_id')
+      .eq('document_id', documentId)
+
+    if (quizDocsError) throw quizDocsError
+
+    // 3. Si hay quiz_documents, obtener los quizzes completos
+    let multiDocQuizzes: Quiz[] = []
+    if (quizDocuments && quizDocuments.length > 0) {
+      const quizIds = quizDocuments.map(qd => qd.quiz_id)
+      const { data: quizzes, error: quizzesError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .in('id', quizIds)
+        .order('generated_at', { ascending: false })
+
+      if (quizzesError) throw quizzesError
+      multiDocQuizzes = quizzes || []
+    }
+
+    // 4. Combinar ambos resultados y eliminar duplicados
+    const allQuizzes = [...(legacyQuizzes || []), ...multiDocQuizzes]
+    const uniqueQuizzes = Array.from(
+      new Map(allQuizzes.map(quiz => [quiz.id, quiz])).values()
+    )
+
+    // 5. Ordenar por fecha
+    return uniqueQuizzes.sort((a, b) =>
+      new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime()
+    )
   }
 
   /**
@@ -96,6 +130,29 @@ export class QuizzesService {
       .select('*')
       .eq('user_id', userId)
       .eq('quiz_id', quizId)
+
+    if (error) throw error
+    return data || []
+  }
+
+  /**
+   * Obtiene las respuestas de un intento específico basado en el timestamp del learning_progress
+   * Las respuestas se filtran por un rango de tiempo alrededor del completed_at
+   */
+  async getAttemptAnswers(userId: string, quizId: string, attemptCompletedAt: string): Promise<UserAnswer[]> {
+    // Convertir el timestamp a Date y crear un rango de ±5 minutos
+    const completedDate = new Date(attemptCompletedAt)
+    const startTime = new Date(completedDate.getTime() - 5 * 60 * 1000).toISOString()
+    const endTime = new Date(completedDate.getTime() + 5 * 60 * 1000).toISOString()
+
+    const { data, error } = await supabase
+      .from('user_answers')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('quiz_id', quizId)
+      .gte('answered_at', startTime)
+      .lte('answered_at', endTime)
+      .order('answered_at', { ascending: true })
 
     if (error) throw error
     return data || []

@@ -11,6 +11,7 @@ const { success } = useToast()
 
 const loading = ref(true)
 const challenges = ref<any[]>([])
+const participatedChallenges = ref<any[]>([])
 
 onMounted(async () => {
   if (!user.value) {
@@ -32,6 +33,7 @@ const loadMyChallenges = async () => {
 
     const data = await response.json()
     challenges.value = data.challenges || []
+    participatedChallenges.value = data.participated || []
   } catch (error) {
     console.error('Error loading my challenges:', error)
   } finally {
@@ -87,13 +89,13 @@ const inactiveChallenges = computed(() => {
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="challenges.length === 0" class="text-center py-12">
+      <div v-else-if="challenges.length === 0 && participatedChallenges.length === 0" class="text-center py-12">
         <div class="text-6xl mb-4">📝</div>
         <h3 class="text-xl font-semibold text-gray-700 mb-2">
-          No has compartido ningún desafío aún
+          No has compartido ni participado en ningún desafío
         </h3>
         <p class="text-gray-500 mb-6">
-          Completa un quiz y compártelo para crear tu primer desafío
+          Completa un quiz y compártelo, o pide a alguien que te comparta un desafío
         </p>
         <button
           @click="router.push('/documents')"
@@ -166,14 +168,6 @@ const inactiveChallenges = computed(() => {
                 </div>
               </div>
 
-              <!-- Share Code -->
-              <div class="mb-4 p-3 bg-gray-50 rounded-lg">
-                <div class="text-xs text-gray-500 mb-1">Código de acceso:</div>
-                <div class="font-mono font-bold text-lg text-gray-900">
-                  {{ challenge.share_code }}
-                </div>
-              </div>
-
               <!-- Action Buttons -->
               <div class="flex space-x-2">
                 <button
@@ -215,6 +209,55 @@ const inactiveChallenges = computed(() => {
               <div class="text-sm text-gray-600">
                 {{ challenge.total_attempts || 0 }} participantes
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participated Challenges -->
+        <div v-if="participatedChallenges.length > 0" class="mt-8">
+          <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <span class="text-2xl mr-2">🎯</span>
+            Desafíos en los que Participaste ({{ participatedChallenges.length }})
+          </h2>
+
+          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              v-for="challenge in participatedChallenges"
+              :key="challenge.id"
+              class="card hover:shadow-lg transition-shadow duration-200 border-2 border-blue-100"
+            >
+              <div class="mb-4">
+                <h3 class="font-bold text-lg text-gray-900 mb-2">
+                  {{ challenge.quiz_title }}
+                </h3>
+                <div class="flex items-center space-x-2 text-sm text-gray-500">
+                  <span>📅 {{ formatDate(challenge.created_at) }}</span>
+                </div>
+              </div>
+
+              <!-- User Stats -->
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                  <div class="text-2xl font-bold text-blue-600">
+                    {{ challenge.user_score }}%
+                  </div>
+                  <div class="text-xs text-gray-600">Tu Mejor Score</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-3 text-center">
+                  <div class="text-2xl font-bold text-purple-600">
+                    {{ challenge.user_attempts }}
+                  </div>
+                  <div class="text-xs text-gray-600">Intentos</div>
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <button
+                @click="router.push(`/challenge/${challenge.share_slug}`)"
+                class="btn btn-primary w-full text-sm"
+              >
+                👁️ Ver Desafío
+              </button>
             </div>
           </div>
         </div>

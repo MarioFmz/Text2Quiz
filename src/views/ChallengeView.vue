@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { documentsService } from '@/services/documentsService'
 import type { Question } from '@/types'
+// @ts-ignore
+import Confetti from '@/utils/confetti.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +18,7 @@ const loading = ref(true)
 const challenge = ref<any>(null)
 const quiz = ref<any>(null)
 const questions = ref<Question[]>([])
+const documents = ref<any[]>([])
 const currentQuestionIndex = ref(0)
 const userAnswers = ref<Record<string, string>>({})
 const showResults = ref(false)
@@ -25,6 +29,20 @@ const leaderboard = ref<any[]>([])
 const showLeaderboard = ref(false)
 const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
+const isCreator = ref(false)
+
+// Computed property to check if user has already completed this challenge
+const hasCompletedBefore = computed(() => {
+  if (!user.value) return false
+  return leaderboard.value.some(entry => entry.user_id === user.value.id)
+})
+
+// Computed property for button text
+const startButtonText = computed(() => {
+  if (isCreator.value) return 'Reintentar desafío'
+  if (hasCompletedBefore.value) return 'Reintentar'
+  return 'Comenzar desafío'
+})
 
 onMounted(async () => {
   // Verificar autenticación
@@ -35,8 +53,37 @@ onMounted(async () => {
     return
   }
 
+  // Cargar perfil del usuario y auto-rellenar username
+  await loadUserProfile()
+
   await loadChallenge()
 })
+
+const loadUserProfile = async () => {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const response = await fetch(`${apiUrl}/api/profile/${user.value?.id}`)
+
+    if (response.ok) {
+      const data = await response.json()
+      if (data.profile && data.profile.display_name) {
+        username.value = data.profile.display_name
+      } else if (user.value?.email) {
+        // Fallback al email si no hay display_name
+        username.value = user.value.email.split('@')[0]
+      }
+    } else if (user.value?.email) {
+      // Si no hay perfil, usar email
+      username.value = user.value.email.split('@')[0]
+    }
+  } catch (err) {
+    console.error('Error loading profile:', err)
+    // Fallback al email en caso de error
+    if (user.value?.email) {
+      username.value = user.value.email.split('@')[0]
+    }
+  }
+}
 
 const loadChallenge = async () => {
   try {
@@ -51,6 +98,12 @@ const loadChallenge = async () => {
     challenge.value = data.challenge
     quiz.value = data.quiz
     questions.value = data.questions
+    documents.value = data.documents || []
+
+    // Verificar si el usuario actual es el creador
+    if (user.value && challenge.value.creator_id === user.value.id) {
+      isCreator.value = true
+    }
 
     // Load leaderboard
     await loadLeaderboard()
@@ -60,6 +113,16 @@ const loadChallenge = async () => {
     router.push('/')
   } finally {
     loading.value = false
+  }
+}
+
+const viewDocument = async (filePath: string) => {
+  try {
+    const signedUrl = await documentsService.getSignedUrl(filePath)
+    window.open(signedUrl, '_blank')
+  } catch (error) {
+    console.error('Error opening document:', error)
+    alert('No se pudo abrir el documento')
   }
 }
 
@@ -128,6 +191,14 @@ const submitQuiz = async () => {
 
     await loadLeaderboard()
     showResults.value = true
+
+    // Confeti si el resultado es 100%
+    const percentage = Math.round((correctCount / questions.value.length) * 100)
+    if (percentage === 100) {
+      setTimeout(() => {
+        triggerConfetti()
+      }, 300)
+    }
   } catch (error) {
     console.error('Error submitting quiz:', error)
     alert('Error al enviar el quiz')
@@ -169,6 +240,51 @@ const getRankEmoji = (rank: number) => {
   if (rank === 2) return '🥈'
   if (rank === 3) return '🥉'
   return `#${rank}`
+}
+
+const triggerConfetti = () => {
+  // Crear múltiples explosiones de confeti
+  const positions = [
+    { x: window.innerWidth * 0.25, y: window.innerHeight * 0.3 },
+    { x: window.innerWidth * 0.5, y: window.innerHeight * 0.2 },
+    { x: window.innerWidth * 0.75, y: window.innerHeight * 0.3 }
+  ]
+
+  positions.forEach((pos, index) => {
+    setTimeout(() => {
+      // Crear un elemento temporal para el confeti
+      const confettiElement = document.createElement('div')
+      confettiElement.id = `confetti-trigger-${index}`
+      confettiElement.style.position = 'fixed'
+      confettiElement.style.left = `${pos.x}px`
+      confettiElement.style.top = `${pos.y}px`
+      confettiElement.style.width = '1px'
+      confettiElement.style.height = '1px'
+      confettiElement.style.pointerEvents = 'none'
+      document.body.appendChild(confettiElement)
+
+      // Disparar el confeti
+      const confetti = new Confetti(`confetti-trigger-${index}`)
+      confetti.setCount(75)
+      confetti.setSize(1.5)
+      confetti.setPower(30)
+      confetti.setFade(true)
+      confetti.destroyTarget(false)
+
+      // Simular click para disparar el confeti
+      const event = new MouseEvent('click', {
+        clientX: pos.x,
+        clientY: pos.y,
+        bubbles: true
+      })
+      confettiElement.dispatchEvent(event)
+
+      // Limpiar el elemento después de un tiempo
+      setTimeout(() => {
+        confettiElement.remove()
+      }, 5000)
+    }, index * 150)
+  })
 }
 </script>
 
@@ -281,7 +397,15 @@ const getRankEmoji = (rank: number) => {
 
       <!-- Summary View -->
       <div v-else-if="showSummary && quiz" class="space-y-4 sm:space-y-6">
-        <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6 sm:p-8 text-center">
+        <!-- Creator View Header -->
+        <div v-if="isCreator" class="bg-gradient-to-r from-orange-500 to-yellow-600 text-white rounded-lg p-6 sm:p-8 text-center">
+          <div class="text-4xl mb-3">👑</div>
+          <h1 class="text-2xl sm:text-3xl font-bold mb-2">Tu Desafío</h1>
+          <p class="text-orange-100">Esta es la vista de estadísticas de tu desafío</p>
+        </div>
+
+        <!-- Participant View Header -->
+        <div v-else class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6 sm:p-8 text-center">
           <div class="text-4xl mb-3">🎯</div>
           <h1 class="text-2xl sm:text-3xl font-bold mb-2">Desafío de Quiz</h1>
           <p class="text-blue-100">¡Te han retado a completar este quiz!</p>
@@ -293,8 +417,25 @@ const getRankEmoji = (rank: number) => {
             <h2 class="text-lg sm:text-xl font-bold">{{ quiz.title }}</h2>
           </div>
 
-          <div v-if="quiz.summary" class="prose max-w-none mb-6">
+          <div v-if="quiz.summary" class="mb-6">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">📋 Resumen</h3>
             <p class="text-sm sm:text-base text-gray-700 whitespace-pre-line">{{ quiz.summary }}</p>
+          </div>
+
+          <!-- Document Links -->
+          <div v-if="documents.length > 0" class="mb-6">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">📄 Documentos de referencia</h3>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="doc in documents"
+                :key="doc.id"
+                @click="viewDocument(doc.file_url)"
+                class="btn btn-secondary text-xs sm:text-sm flex items-center space-x-1"
+              >
+                <span>📎</span>
+                <span>{{ doc.title }}</span>
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 p-3 sm:p-6 bg-gray-50 rounded-lg">
@@ -314,30 +455,20 @@ const getRankEmoji = (rank: number) => {
             </div>
           </div>
 
-          <!-- Username Input -->
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              ¿Cómo te llamas?
-            </label>
-            <input
-              v-model="username"
-              type="text"
-              placeholder="Tu nombre"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <p class="text-xs text-gray-500 mt-2">
-              Tu nombre aparecerá en el ranking
+          <!-- Start Quiz Button - For everyone -->
+          <div>
+            <button
+              @click="startQuiz"
+              :disabled="!username.trim()"
+              class="btn btn-primary w-full"
+              :class="{ 'opacity-50 cursor-not-allowed': !username.trim() }"
+            >
+              {{ startButtonText }}
+            </button>
+            <p v-if="username" class="text-xs text-gray-500 mt-2 text-center">
+              Participando como: <strong>{{ username }}</strong>
             </p>
           </div>
-
-          <button
-            @click="startQuiz"
-            :disabled="!username.trim()"
-            class="btn btn-primary w-full"
-            :class="{ 'opacity-50 cursor-not-allowed': !username.trim() }"
-          >
-            Comenzar desafío
-          </button>
         </div>
 
         <!-- Creator Challenge Banner -->
@@ -414,13 +545,8 @@ const getRankEmoji = (rank: number) => {
 
             <div class="space-y-2 sm:space-y-3">
               <button
-                v-for="option in [
-                  questions[currentQuestionIndex].option_a,
-                  questions[currentQuestionIndex].option_b,
-                  questions[currentQuestionIndex].option_c,
-                  questions[currentQuestionIndex].option_d
-                ]"
-                :key="option"
+                v-for="(option, index) in questions[currentQuestionIndex].options"
+                :key="index"
                 @click="selectAnswer(questions[currentQuestionIndex].id, option)"
                 class="w-full text-left p-3 sm:p-4 rounded-lg border-2 transition-all text-sm sm:text-base"
                 :class="

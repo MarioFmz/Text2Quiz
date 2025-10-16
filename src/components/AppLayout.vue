@@ -38,16 +38,10 @@ const closeMobileMenu = () => {
           <!-- Desktop Navigation -->
           <nav v-if="user" class="hidden md:flex items-center space-x-6">
             <router-link
-              to="/dashboard"
+              to="/quizzes"
               class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
             >
-              Dashboard
-            </router-link>
-            <router-link
-              to="/documents"
-              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            >
-              Documentos
+              📝 Mis Quizzes
             </router-link>
             <router-link
               to="/my-challenges"
@@ -56,10 +50,22 @@ const closeMobileMenu = () => {
               🏆 Mis Desafíos
             </router-link>
             <router-link
-              to="/upload"
+              to="/documents"
+              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+            >
+              Documentos
+            </router-link>
+            <router-link
+              to="/profile"
+              class="text-gray-600 hover:text-gray-900 transition-colors text-sm"
+            >
+              👤 Perfil
+            </router-link>
+            <router-link
+              to="/create-quiz"
               class="btn btn-primary text-sm"
             >
-              Subir
+              ✨ Crear Quiz
             </router-link>
             <button
               @click="handleLogout"
@@ -120,18 +126,11 @@ const closeMobileMenu = () => {
         <div v-if="user && mobileMenuOpen" class="md:hidden border-t border-gray-200 bg-white">
           <div class="px-4 py-3 space-y-1">
             <router-link
-              to="/dashboard"
+              to="/quizzes"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Dashboard
-            </router-link>
-            <router-link
-              to="/documents"
-              @click="closeMobileMenu"
-              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              Documentos
+              📝 Mis Quizzes
             </router-link>
             <router-link
               to="/my-challenges"
@@ -141,11 +140,25 @@ const closeMobileMenu = () => {
               🏆 Mis Desafíos
             </router-link>
             <router-link
-              to="/upload"
+              to="/documents"
               @click="closeMobileMenu"
               class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Subir documento
+              Documentos
+            </router-link>
+            <router-link
+              to="/profile"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              👤 Perfil
+            </router-link>
+            <router-link
+              to="/create-quiz"
+              @click="closeMobileMenu"
+              class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              ✨ Crear Quiz
             </router-link>
             <button
               @click="handleLogout"
