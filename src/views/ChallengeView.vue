@@ -34,7 +34,7 @@ const isCreator = ref(false)
 // Computed property to check if user has already completed this challenge
 const hasCompletedBefore = computed(() => {
   if (!user.value) return false
-  return leaderboard.value.some(entry => entry.user_id === user.value.id)
+  return leaderboard.value.some(entry => entry.user_id === user.value?.id)
 })
 
 // Computed property for button text
