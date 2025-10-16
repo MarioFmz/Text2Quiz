@@ -132,7 +132,7 @@ const viewDocument = async (filePath: string) => {
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+    <div class="max-w-7xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">Mis documentos</h1>
         <router-link to="/upload" class="btn btn-primary w-full sm:w-auto text-center">

@@ -190,7 +190,7 @@ const getQuestionForId = (questionId: string) => {
 
 <template>
   <AppLayout>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+    <div class="max-w-4xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
       <div v-if="loading" class="text-center py-12">
         <p class="text-gray-600">Cargando quiz...</p>
       </div>

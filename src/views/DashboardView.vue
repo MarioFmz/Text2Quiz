@@ -269,7 +269,40 @@ const greetingTime = computed(() => {
   return 'Buenas noches'
 })
 
-const userName = computed(() => user.value?.email?.split('@')[0] || 'Usuario')
+const greetingEmoji = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '🌙'  // Madrugada
+  if (hour < 12) return '☀️'  // Mañana
+  if (hour < 18) return '🌤️'  // Tarde
+  if (hour < 21) return '🌆'  // Atardecer
+  return '✨'  // Noche
+})
+
+const motivationalMessage = computed(() => {
+  const messages = [
+    '¿Qué quieres aprender hoy?',
+    'Continuemos donde lo dejaste',
+    '¡Es un buen día para aprender algo nuevo!',
+    'Tu conocimiento está esperando crecer',
+    'Cada pregunta te acerca a tu objetivo'
+  ]
+  const hour = new Date().getHours()
+  const day = new Date().getDay()
+
+  // Mensajes específicos por momento del día
+  if (hour < 6) return '¡Vaya! Madrugando para estudiar, eres increíble'
+  if (hour < 10) return '¡Genial! La mañana es perfecta para aprender'
+  if (day === 0 || day === 6) return '¡Aprovechando el fin de semana! 💪'
+
+  // Mensaje aleatorio basado en el día del mes para variedad
+  return messages[new Date().getDate() % messages.length]
+})
+
+const userName = computed(() => {
+  const email = user.value?.email?.split('@')[0] || 'Usuario'
+  // Capitalizar primera letra
+  return email.charAt(0).toUpperCase() + email.slice(1)
+})
 </script>
 
 <template>
@@ -281,12 +314,19 @@ const userName = computed(() => user.value?.email?.split('@')[0] || 'Usuario')
       <!-- ============================================ -->
       <div v-if="practiceMode === 'dashboard'">
 
-        <!-- HEADER MEJORADO - Mobile First -->
-        <div class="mb-4 sm:mb-8">
-          <h1 class="text-xl sm:text-2xl md:text-3xl font-bold mb-1">
-            {{ greetingTime }}, {{ userName }}
-          </h1>
-          <p class="text-gray-500 text-xs sm:text-sm md:text-base">¿Qué quieres aprender hoy?</p>
+        <!-- SALUDO PERSONALIZADO - Super Prominente -->
+        <div class="mb-6 sm:mb-10">
+          <div class="flex items-center gap-2 sm:gap-3 mb-2">
+            <span class="text-3xl sm:text-4xl md:text-5xl">{{ greetingEmoji }}</span>
+            <div>
+              <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {{ greetingTime }}, {{ userName }}
+              </h1>
+              <p class="text-gray-600 text-sm sm:text-base md:text-lg mt-1">
+                {{ motivationalMessage }}
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- ============================================ -->

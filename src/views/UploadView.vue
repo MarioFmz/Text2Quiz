@@ -135,7 +135,7 @@ const cancelQuizGeneration = () => {
 
 <template>
   <AppLayout>
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="max-w-3xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
       <h1 class="text-4xl font-bold mb-2">Subir documento</h1>
       <p class="text-gray-600 mb-12">Sube un PDF o imagen para generar un quiz</p>
 
