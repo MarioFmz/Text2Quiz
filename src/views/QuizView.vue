@@ -2,6 +2,7 @@
 import AppLayout from '@/components/AppLayout.vue'
 import ShareQuizButton from '@/components/ShareQuizButton.vue'
 import ShareResultsButtons from '@/components/ShareResultsButtons.vue'
+import NotificationModal from '@/components/NotificationModal.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
@@ -58,9 +59,23 @@ const categories = ref<QuizCategory[]>([])
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 
+// Notification modal
+const showNotification = ref(false)
+const notificationType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const notificationMessage = ref('')
+const notificationTitle = ref('')
+
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const progress = computed(() => ((currentQuestionIndex.value + 1) / questions.value.length) * 100)
 const isLastQuestion = computed(() => currentQuestionIndex.value === questions.value.length - 1)
+
+// Helper function to show notifications
+const showNotif = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  notificationType.value = type
+  notificationMessage.value = message
+  notificationTitle.value = title || ''
+  showNotification.value = true
+}
 
 onMounted(async () => {
   try {
@@ -376,10 +391,10 @@ const saveVisibilityChanges = async () => {
     }
 
     showEditModal.value = false
-    alert('Quiz actualizado correctamente')
+    showNotif('success', 'El quiz se ha actualizado correctamente')
   } catch (error) {
     console.error('Error updating quiz:', error)
-    alert('Error al actualizar el quiz')
+    showNotif('error', 'No se pudo actualizar el quiz. Por favor, intenta de nuevo.')
   } finally {
     editingVisibility.value = false
   }
@@ -401,11 +416,13 @@ const deleteQuiz = async () => {
       }
     })
 
-    alert('Quiz eliminado correctamente')
-    router.push('/quizzes')
+    showNotif('success', 'El quiz se ha eliminado correctamente')
+    setTimeout(() => {
+      router.push('/quizzes')
+    }, 1500)
   } catch (error) {
     console.error('Error deleting quiz:', error)
-    alert('Error al eliminar el quiz')
+    showNotif('error', 'No se pudo eliminar el quiz. Por favor, intenta de nuevo.')
   } finally {
     deleting.value = false
     showDeleteConfirm.value = false
@@ -1172,6 +1189,15 @@ const triggerConfetti = () => {
           </div>
         </div>
       </Transition>
+
+      <!-- Notification Modal -->
+      <NotificationModal
+        :show="showNotification"
+        :type="notificationType"
+        :title="notificationTitle"
+        :message="notificationMessage"
+        @close="showNotification = false"
+      />
     </div>
   </AppLayout>
 </template>

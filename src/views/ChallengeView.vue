@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
+import NotificationModal from '@/components/NotificationModal.vue'
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
@@ -32,6 +33,19 @@ const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 const isCreator = ref(false)
 const showStudyMaterial = ref(false)
+
+// Notification modal
+const showNotification = ref(false)
+const notificationType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const notificationMessage = ref('')
+const notificationTitle = ref('')
+
+const showNotif = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  notificationType.value = type
+  notificationMessage.value = message
+  notificationTitle.value = title || ''
+  showNotification.value = true
+}
 
 // Auto-save progress variables
 const sessionId = ref<string>('')
@@ -334,7 +348,7 @@ const loadChallenge = async () => {
     await loadSavedProgress()
   } catch (error) {
     console.error('Error loading challenge:', error)
-    alert('No se pudo cargar el desafío')
+    showNotif('error', 'No se pudo cargar el desafío')
     router.push('/')
   } finally {
     loading.value = false
@@ -347,7 +361,7 @@ const viewDocument = async (filePath: string) => {
     window.open(signedUrl, '_blank')
   } catch (error) {
     console.error('Error opening document:', error)
-    alert('No se pudo abrir el documento')
+    showNotif('error', 'No se pudo abrir el documento')
   }
 }
 
@@ -391,7 +405,7 @@ const previousQuestion = () => {
 
 const submitQuiz = async () => {
   if (!username.value.trim()) {
-    alert('Por favor, ingresa tu nombre para guardar tu puntuación')
+    showNotif('warning', 'Por favor, ingresa tu nombre para guardar tu puntuación')
     return
   }
 
@@ -434,7 +448,7 @@ const submitQuiz = async () => {
     }
   } catch (error) {
     console.error('Error submitting quiz:', error)
-    alert('Error al enviar el quiz')
+    showNotif('error', 'Error al enviar el quiz. Por favor, intenta de nuevo.')
   } finally {
     submitting.value = false
   }
@@ -1039,6 +1053,15 @@ const triggerConfetti = () => {
           ></div>
         </div>
       </div>
+
+      <!-- Notification Modal -->
+      <NotificationModal
+        :show="showNotification"
+        :type="notificationType"
+        :title="notificationTitle"
+        :message="notificationMessage"
+        @close="showNotification = false"
+      />
     </div>
   </AppLayout>
 </template>

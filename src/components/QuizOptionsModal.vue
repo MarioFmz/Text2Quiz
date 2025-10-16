@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import NotificationModal from '@/components/NotificationModal.vue'
 
 interface Props {
   show: boolean
@@ -28,9 +29,23 @@ const quizName = ref(getDefaultName())
 const numQuestions = ref(10)
 const difficulty = ref<'easy' | 'medium' | 'hard'>('medium')
 
+// Notification modal
+const showNotification = ref(false)
+const notificationType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const notificationMessage = ref('')
+const notificationTitle = ref('')
+
+// Helper function to show notifications
+const showNotif = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  notificationType.value = type
+  notificationMessage.value = message
+  notificationTitle.value = title || ''
+  showNotification.value = true
+}
+
 const handleGenerate = () => {
   if (!quizName.value.trim()) {
-    alert('Por favor, ingresa un nombre para el quiz')
+    showNotif('warning', 'Por favor, ingresa un nombre para el quiz')
     return
   }
 
@@ -171,6 +186,15 @@ const handleBackdropClick = (event: MouseEvent) => {
       </div>
     </Transition>
   </Teleport>
+
+  <!-- Notification Modal -->
+  <NotificationModal
+    :show="showNotification"
+    :type="notificationType"
+    :title="notificationTitle"
+    :message="notificationMessage"
+    @close="showNotification = false"
+  />
 </template>
 
 <style scoped>

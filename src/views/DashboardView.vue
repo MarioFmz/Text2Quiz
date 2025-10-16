@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/components/AppLayout.vue'
+import NotificationModal from '@/components/NotificationModal.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
@@ -34,6 +35,20 @@ const userAnswers = ref<Record<string, string>>({})
 const showResults = ref(false)
 const knownCards = ref<string[]>([])
 const unknownCards = ref<string[]>([])
+
+// Notification modal
+const showNotification = ref(false)
+const notificationType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const notificationMessage = ref('')
+const notificationTitle = ref('')
+
+// Helper function to show notifications
+const showNotif = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  notificationType.value = type
+  notificationMessage.value = message
+  notificationTitle.value = title || ''
+  showNotification.value = true
+}
 
 onMounted(async () => {
   if (user.value) {
@@ -104,7 +119,7 @@ const startFlashCards = async () => {
     practiceMode.value = 'flashcards'
   } catch (error) {
     console.error('Error loading questions:', error)
-    alert('Error al cargar las preguntas. Asegúrate de haber completado al menos un quiz.')
+    showNotif('error', 'Error al cargar las preguntas. Asegúrate de haber completado al menos un quiz.')
   } finally {
     practiceLoading.value = false
   }
@@ -123,7 +138,7 @@ const startQuizExpress = async () => {
     practiceMode.value = 'express'
   } catch (error) {
     console.error('Error loading questions:', error)
-    alert('Error al cargar las preguntas. Asegúrate de haber completado al menos un quiz.')
+    showNotif('error', 'Error al cargar las preguntas. Asegúrate de haber completado al menos un quiz.')
   } finally {
     practiceLoading.value = false
   }
@@ -143,7 +158,7 @@ const startDailyChallenge = async () => {
     practiceMode.value = 'daily'
   } catch (error) {
     console.error('Error loading daily challenge:', error)
-    alert('Error al cargar el desafío diario. Asegúrate de haber completado al menos un quiz.')
+    showNotif('error', 'Error al cargar el desafío diario. Asegúrate de haber completado al menos un quiz.')
   } finally {
     practiceLoading.value = false
   }
@@ -823,6 +838,15 @@ const userName = computed(() => {
           </div>
         </div>
       </div>
+
+      <!-- Notification Modal -->
+      <NotificationModal
+        :show="showNotification"
+        :type="notificationType"
+        :title="notificationTitle"
+        :message="notificationMessage"
+        @close="showNotification = false"
+      />
     </div>
   </AppLayout>
 </template>
