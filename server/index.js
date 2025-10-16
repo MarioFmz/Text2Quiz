@@ -786,12 +786,25 @@ app.get('/api/challenges/:identifier', async (req, res) => {
   try {
     const { identifier } = req.params;
 
+    // Check if identifier looks like a UUID (to avoid type errors)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+
+    // Build OR condition based on identifier format
+    let orCondition;
+    if (isUUID) {
+      // If it's a UUID, check all three columns
+      orCondition = `id.eq.${identifier},share_code.eq.${identifier},share_slug.eq.${identifier}`;
+    } else {
+      // If it's not a UUID, only check share_code and share_slug
+      orCondition = `share_code.eq.${identifier},share_slug.eq.${identifier}`;
+    }
+
     // Buscar por ID, código o slug
-    const { data: challenge, error: challengeError } = await supabase
+    const { data: challenge, error: challengeError} = await supabase
       .from('quiz_challenges')
       .select(`
         *,
-        quizzes (
+        quizzes!quiz_challenges_quiz_id_fkey (
           id,
           title,
           difficulty,
@@ -800,7 +813,7 @@ app.get('/api/challenges/:identifier', async (req, res) => {
           document_id
         )
       `)
-      .or(`id.eq.${identifier},share_code.eq.${identifier},share_slug.eq.${identifier}`)
+      .or(orCondition)
       .single();
 
     if (challengeError || !challenge) {
