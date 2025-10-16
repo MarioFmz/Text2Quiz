@@ -154,8 +154,10 @@ const copyLink = async () => {
 
   try {
     const url = await generateChallengeUrl()
-    await navigator.clipboard.writeText(url)
-    success('¡Enlace de desafío copiado!')
+    // Copiar texto motivador + URL en lugar de solo la URL
+    const fullText = `${shareText.value}\n\n${url}`
+    await navigator.clipboard.writeText(fullText)
+    success('¡Mensaje y enlace copiados! Listo para compartir')
   } catch (error) {
     console.error('Error copying link:', error)
     showError('Error al copiar enlace')
@@ -201,8 +203,8 @@ const copyLink = async () => {
     </Teleport>
 
     <div class="text-center mb-4">
-      <p class="text-sm font-medium text-gray-700 mb-3">Comparte tu resultado</p>
-      <div class="flex justify-center gap-3 flex-wrap">
+      <p class="text-sm font-medium text-gray-700 mb-3">Comparte tu resultado y reta a tus amigos</p>
+      <div class="flex justify-center items-center gap-3 flex-wrap">
         <!-- Twitter/X -->
         <button
           @click="shareOnTwitter"
@@ -246,16 +248,23 @@ const copyLink = async () => {
             <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
           </svg>
         </button>
+      </div>
 
-        <!-- Copy Link -->
+      <!-- Separator and Copy Link Button -->
+      <div class="flex items-center justify-center gap-3 mt-4 pt-4 border-t border-gray-200">
+        <span class="text-xs text-gray-500">o</span>
+      </div>
+
+      <div class="flex justify-center mt-3">
         <button
           @click="copyLink"
-          class="share-button bg-gray-600 hover:bg-gray-700"
-          title="Copiar enlace"
+          class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
+          title="Copiar mensaje motivador + enlace"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
           </svg>
+          <span>Copiar Mensaje para Compartir</span>
         </button>
       </div>
     </div>

@@ -105,10 +105,10 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 const categoryOptions = [
-  { value: 'feature', label: '✨ Nueva funcionalidad', icon: '✨' },
-  { value: 'bug', label: '🐛 Reporte de error', icon: '🐛' },
-  { value: 'improvement', label: '💡 Mejora', icon: '💡' },
-  { value: 'other', label: '💬 Otro', icon: '💬' }
+  { value: 'feature', label: 'Nueva funcionalidad', icon: '✨' },
+  { value: 'bug', label: 'Reporte de error', icon: '🐛' },
+  { value: 'improvement', label: 'Mejora', icon: '💡' },
+  { value: 'other', label: 'Otro', icon: '💬' }
 ]
 </script>
 

@@ -59,9 +59,21 @@ const generateShareLink = async () => {
   }
 }
 
-const copyToClipboard = async (text: string) => {
+const copyToClipboard = async (url: string) => {
   try {
-    await navigator.clipboard.writeText(text)
+    // Crear texto motivador para redes sociales
+    const emoji = creatorPercentage.value >= 90 ? '🏆' : creatorPercentage.value >= 70 ? '🎯' : '💪'
+    let shareText = ''
+
+    if (props.creatorScore !== undefined) {
+      // Si hay puntaje, incluirlo en el mensaje
+      shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${creatorPercentage.value}% en el desafío "${props.quizTitle}"\n\n¡Demuestra que puedes hacerlo mejor!\n\n${url}`
+    } else {
+      // Sin puntaje, mensaje genérico
+      shareText = `🎯 Te reto a completar este desafío:\n\n"${props.quizTitle}"\n\n¿Tienes lo necesario?\n\n${url}`
+    }
+
+    await navigator.clipboard.writeText(shareText)
     copied.value = true
     setTimeout(() => {
       copied.value = false
@@ -177,7 +189,7 @@ const closeModal = () => {
               <!-- Share URL -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Enlace directo
+                  Enlace del desafío
                 </label>
                 <div class="flex space-x-2">
                   <input
@@ -187,15 +199,16 @@ const closeModal = () => {
                   />
                   <button
                     @click="copyToClipboard(shareUrl)"
-                    class="px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors"
-                    :class="{ 'bg-green-100 border-green-300': copied }"
+                    class="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
+                    :class="{ 'bg-green-500 hover:bg-green-600': copied }"
+                    title="Copiar texto motivador + enlace"
                   >
-                    <span v-if="copied">✓</span>
-                    <span v-else">📋</span>
+                    <span v-if="copied">✓ Copiado</span>
+                    <span v-else>📋 Copiar</span>
                   </button>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">
-                  O envía este enlace directamente
+                  💡 Al copiar se incluirá un mensaje motivador perfecto para compartir en redes sociales
                 </p>
               </div>
 

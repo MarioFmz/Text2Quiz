@@ -931,7 +931,9 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
               is_active: true,
               is_participant: true, // Marca como participante, no creador
               user_score: percentage,
-              user_attempts: 1
+              user_attempts: 1,
+              user_rank: null,  // Se calculará después
+              total_attempts: 0  // Se calculará después
             });
           } else {
             // Actualizar con la mejor puntuación
@@ -944,6 +946,54 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
           }
         } else {
           console.log(`✗ Challenge filtered out: creator=${challenge?.creator_id === userId}, alreadyCreated=${challenge ? createdChallengeIds.has(challenge.id) : 'no challenge'}`);
+        }
+      }
+
+      // Calcular rankings y total de intentos para cada challenge participado
+      for (const [challengeId, challengeData] of uniqueChallenges) {
+        console.log(`\n🔍 Calculating rank for challenge ${challengeId}...`);
+
+        // Obtener todos los intentos del challenge
+        const { data: allAttempts } = await supabase
+          .from('challenge_attempts')
+          .select('score, total_questions, user_id')
+          .eq('challenge_id', challengeId)
+          .order('score', { ascending: false })
+          .order('time_taken', { ascending: true });
+
+        console.log(`📊 Found ${allAttempts?.length || 0} total attempts for challenge ${challengeId}`);
+
+        if (allAttempts) {
+          challengeData.total_attempts = allAttempts.length;
+
+          // Calcular ranking del usuario
+          const sortedAttempts = [...allAttempts].sort((a, b) => {
+            const percentA = (a.score / a.total_questions) * 100;
+            const percentB = (b.score / b.total_questions) * 100;
+            if (percentB !== percentA) {
+              return percentB - percentA;
+            }
+            // Si empatan en porcentaje, usar time_taken (aunque no lo tenemos aquí, el order inicial lo hace)
+            return 0;
+          });
+
+          console.log(`📋 Sorted attempts:`, sortedAttempts.map((a, i) => `${i+1}. ${a.user_id === userId ? 'YOU' : 'user'}: ${Math.round((a.score / a.total_questions) * 100)}%`));
+
+          const rankIndex = sortedAttempts.findIndex(a => a.user_id === userId);
+          if (rankIndex !== -1) {
+            challengeData.user_rank = rankIndex + 1;
+            console.log(`✅ User rank: ${challengeData.user_rank} out of ${allAttempts.length}`);
+          } else {
+            console.log(`❌ User not found in attempts!`);
+          }
+
+          console.log(`📝 Challenge data:`, {
+            id: challengeData.id,
+            quiz_title: challengeData.quiz_title,
+            user_rank: challengeData.user_rank,
+            total_attempts: challengeData.total_attempts,
+            user_score: challengeData.user_score
+          });
         }
       }
 

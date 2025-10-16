@@ -33,6 +33,7 @@ const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 const isCreator = ref(false)
 const showStudyMaterial = ref(false)
+const regeneratingQuestions = ref(false)
 
 // Notification modal
 const showNotification = ref(false)
@@ -467,6 +468,33 @@ const calculateResults = () => {
 }
 
 const restartQuiz = async () => {
+  // Regenerate questions for all participants
+  regeneratingQuestions.value = true
+
+  try {
+    showNotif('info', 'Regenerando preguntas del desafío...', 'Por favor espera')
+
+    const response = await fetch(`${apiUrl}/api/quizzes/${quiz.value.id}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    if (!response.ok) {
+      throw new Error('Error al regenerar preguntas')
+    }
+
+    // Reload challenge data to get new questions
+    await loadChallenge()
+
+    showNotif('success', '¡Nuevas preguntas generadas! Todos los participantes tendrán preguntas actualizadas.', 'Desafío actualizado')
+  } catch (error) {
+    console.error('Error regenerating questions:', error)
+    showNotif('error', 'No se pudieron regenerar las preguntas. Se usarán las preguntas actuales.')
+  } finally {
+    regeneratingQuestions.value = false
+  }
+
+  // Reset quiz state
   await clearSavedProgress()
   userAnswers.value = {}
   currentQuestionIndex.value = 0
@@ -626,8 +654,19 @@ const triggerConfetti = () => {
             <button @click="toggleLeaderboard" class="btn btn-primary w-full sm:w-auto">
               {{ showLeaderboard ? 'Ocultar' : 'Ver' }} Ranking
             </button>
-            <button @click="restartQuiz" class="btn btn-secondary w-full sm:w-auto">
-              Reintentar
+            <button
+              @click="restartQuiz"
+              :disabled="regeneratingQuestions"
+              class="btn btn-secondary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="regeneratingQuestions" class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Regenerando...</span>
+              </span>
+              <span v-else>Reintentar</span>
             </button>
           </div>
         </div>

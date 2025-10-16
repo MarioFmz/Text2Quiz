@@ -53,6 +53,9 @@ const loadMyRankings = async () => {
     myRankings.value = [...created, ...participated].sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
+
+    console.log('📊 Rankings loaded:', myRankings.value)
+    console.log('📝 Sample ranking:', myRankings.value[0])
   } catch (error) {
     console.error('Error loading rankings:', error)
   } finally {
@@ -60,10 +63,25 @@ const loadMyRankings = async () => {
   }
 }
 
-const copyToClipboard = async (url: string) => {
+const copyToClipboard = async (ranking: any) => {
   try {
-    await navigator.clipboard.writeText(url)
-    success('¡Enlace copiado al portapapeles!')
+    const url = getShareUrl(ranking.share_slug)
+    const emoji = ranking.userScore >= 90 ? '🏆' : ranking.userScore >= 70 ? '🎯' : '💪'
+
+    // Crear texto motivador basado en la posición y puntaje
+    let shareText = ''
+
+    if (ranking.userRank && ranking.userRank <= 3) {
+      // Si está en top 3, presumir la posición
+      const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
+      shareText = `${emoji} ¡Estoy en ${positions[ranking.userRank - 1]}!\n\nAcabo de conseguir ${ranking.userScore}% en el desafío "${ranking.quiz_title}"\n\n¿Puedes superarme?\n\n${url}`
+    } else {
+      // Si no está en top 3, texto de reto general
+      shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${ranking.userScore}% en el desafío "${ranking.quiz_title}"\n\n¡Demuestra que puedes hacerlo mejor!\n\n${url}`
+    }
+
+    await navigator.clipboard.writeText(shareText)
+    success('¡Mensaje y enlace copiados! Listo para compartir')
   } catch (error) {
     console.error('Error copying to clipboard:', error)
   }
@@ -309,17 +327,20 @@ const topRankings = computed(() =>
               </div>
 
               <!-- Action Buttons -->
-              <div class="flex space-x-2">
+              <div class="flex flex-col space-y-2">
                 <button
-                  @click="copyToClipboard(getShareUrl(ranking.share_slug))"
-                  class="btn btn-secondary flex-1 text-xs py-2"
-                  title="Copiar enlace para compartir"
+                  @click="copyToClipboard(ranking)"
+                  class="btn btn-primary w-full text-xs sm:text-sm py-2.5 flex items-center justify-center gap-2"
+                  title="Copiar mensaje motivador + enlace"
                 >
-                  📋
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                  <span>Compartir</span>
                 </button>
                 <button
                   @click="router.push(`/challenge/${ranking.share_slug}`)"
-                  class="btn btn-primary flex-1 text-xs py-2"
+                  class="btn btn-secondary w-full text-xs sm:text-sm py-2"
                 >
                   Ver Ranking Completo
                 </button>
