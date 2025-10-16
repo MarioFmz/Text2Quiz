@@ -256,48 +256,30 @@ const getDisplayName = (entry: any, index: number) => {
 }
 
 const triggerConfetti = () => {
-  // Crear múltiples explosiones de confeti
-  const positions = [
-    { x: window.innerWidth * 0.25, y: window.innerHeight * 0.3 },
-    { x: window.innerWidth * 0.5, y: window.innerHeight * 0.2 },
-    { x: window.innerWidth * 0.75, y: window.innerHeight * 0.3 }
-  ]
-
-  positions.forEach((pos, index) => {
+  // Crear 3 explosiones de confeti
+  for (let i = 0; i < 3; i++) {
     setTimeout(() => {
-      // Crear un elemento temporal para el confeti
+      // Crear elemento para el confeti
       const confettiElement = document.createElement('div')
-      confettiElement.id = `confetti-trigger-${index}`
-      confettiElement.style.position = 'fixed'
-      confettiElement.style.left = `${pos.x}px`
-      confettiElement.style.top = `${pos.y}px`
-      confettiElement.style.width = '1px'
-      confettiElement.style.height = '1px'
-      confettiElement.style.pointerEvents = 'none'
+      confettiElement.id = `confetti-trigger-${i}-${Date.now()}`
       document.body.appendChild(confettiElement)
 
-      // Disparar el confeti
-      const confetti = new Confetti(`confetti-trigger-${index}`)
+      // Configurar y lanzar confeti
+      const confetti = new Confetti(confettiElement.id)
       confetti.setCount(75)
-      confetti.setSize(1.5)
-      confetti.setPower(30)
-      confetti.setFade(true)
-      confetti.destroyTarget(false)
+      confetti.setSize(1)
+      confetti.setPower(25)
+      confetti.setFade(false)
+      confetti.destroyTarget(true)
 
-      // Simular click para disparar el confeti
-      const event = new MouseEvent('click', {
-        clientX: pos.x,
-        clientY: pos.y,
-        bubbles: true
-      })
-      confettiElement.dispatchEvent(event)
-
-      // Limpiar el elemento después de un tiempo
+      // Limpiar después de 5 segundos
       setTimeout(() => {
-        confettiElement.remove()
+        if (confettiElement.parentNode) {
+          confettiElement.remove()
+        }
       }, 5000)
-    }, index * 150)
-  })
+    }, i * 200)
+  }
 }
 </script>
 
