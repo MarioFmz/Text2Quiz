@@ -1107,6 +1107,62 @@ app.get('/api/challenges/:challengeId/leaderboard', async (req, res) => {
   }
 });
 
+// Helper function to get current leaderboard top player
+async function getTopPlayer(challengeId) {
+  const { data: attempts } = await supabase
+    .from('challenge_attempts')
+    .select('user_id, username, score, total_questions, time_taken')
+    .eq('challenge_id', challengeId)
+    .order('score', { ascending: false })
+    .order('time_taken', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return attempts;
+}
+
+// Helper function to create rank change notification
+async function createRankChangeNotification(userId, challengeId, newLeader, previousRank = 1) {
+  try {
+    // Get challenge and quiz info
+    const { data: challenge } = await supabase
+      .from('quiz_challenges')
+      .select('quiz_id, quizzes!quiz_challenges_quiz_id_fkey(title)')
+      .eq('id', challengeId)
+      .single();
+
+    if (!challenge || !userId) return;
+
+    const quizTitle = challenge.quizzes?.title || 'un desafío';
+    const newLeaderScore = Math.round((newLeader.score / newLeader.total_questions) * 100);
+
+    // Create notification
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        challenge_id: challengeId,
+        type: 'first_place_lost',
+        title: '¡Te han superado!',
+        message: `${newLeader.username} te ha superado en "${quizTitle}" con un ${newLeaderScore}%`,
+        data: {
+          previous_rank: previousRank,
+          new_rank: 2,
+          new_leader_username: newLeader.username,
+          new_leader_score: newLeader.score,
+          new_leader_percentage: newLeaderScore,
+          quiz_title: quizTitle,
+          challenge_slug: challenge.share_slug
+        }
+      });
+
+    console.log(`📬 Notification created: User ${userId} lost first place in challenge ${challengeId}`);
+  } catch (error) {
+    console.error('Error creating rank change notification:', error);
+    // Don't throw - notification failure shouldn't break the main flow
+  }
+}
+
 // Guardar un intento en el challenge
 app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
   try {
@@ -1116,6 +1172,9 @@ app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
     if (!username || score === undefined || !totalQuestions || !timeTaken) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // 🔔 Get current leader BEFORE saving the new attempt
+    const previousLeader = await getTopPlayer(challengeId);
 
     let attempt;
 
@@ -1190,6 +1249,23 @@ app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
       if (attemptError) throw attemptError;
       attempt = newAttempt;
       console.log(`Anonymous challenge attempt saved: ${username} - ${score}/${totalQuestions}`);
+    }
+
+    // 🔔 Check if leader changed and create notification
+    if (previousLeader && previousLeader.user_id) {
+      // Get new leader AFTER saving the attempt
+      const newLeader = await getTopPlayer(challengeId);
+
+      // Check if leader changed
+      if (newLeader && newLeader.user_id !== previousLeader.user_id) {
+        // Someone took first place! Notify the previous leader
+        await createRankChangeNotification(
+          previousLeader.user_id,
+          challengeId,
+          newLeader,
+          1 // previous rank was 1st place
+        );
+      }
     }
 
     res.json({
@@ -2178,6 +2254,252 @@ app.post('/api/auth/change-password', async (req, res) => {
     });
   } catch (error) {
     console.error('Error changing password:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// NOTIFICATIONS ENDPOINTS
+// ============================================
+
+// Get user notifications
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { unread_only } = req.query;
+
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (unread_only === 'true') {
+      query = query.eq('read', false);
+    }
+
+    const { data: notifications, error } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      notifications: notifications || [],
+      unread_count: notifications?.filter(n => !n.read).length || 0
+    });
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:notificationId/read', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Update notification
+    const { data: notification, error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      notification
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark all notifications as read
+app.put('/api/notifications/:userId/read-all', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', userId)
+      .eq('read', false);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'All notifications marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete notification
+app.delete('/api/notifications/:notificationId', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Notification deleted'
+    });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// SUGGESTIONS ENDPOINTS
+// ============================================
+
+// Submit a suggestion
+app.post('/api/suggestions', async (req, res) => {
+  try {
+    const { userId, email, category, title, description } = req.body;
+
+    if (!category || !title || !description) {
+      return res.status(400).json({ error: 'category, title, and description are required' });
+    }
+
+    const validCategories = ['feature', 'bug', 'improvement', 'other'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+
+    const { data: suggestion, error } = await supabase
+      .from('suggestions')
+      .insert({
+        user_id: userId || null,
+        email: email || null,
+        category,
+        title,
+        description,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`📝 New suggestion submitted: "${title}" by ${userId || email || 'anonymous'}`);
+
+    res.json({
+      success: true,
+      suggestion,
+      message: 'Sugerencia enviada correctamente. ¡Gracias por tu feedback!'
+    });
+  } catch (error) {
+    console.error('Error submitting suggestion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all suggestions (admin only - requires service role)
+app.get('/api/suggestions', async (req, res) => {
+  try {
+    const { status, category, page = 1, limit = 20 } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabase
+      .from('suggestions')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    query = query.range(offset, offset + parseInt(limit) - 1);
+
+    const { data: suggestions, error, count } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      suggestions: suggestions || [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        totalPages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error getting suggestions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update suggestion status (admin only)
+app.put('/api/suggestions/:suggestionId', async (req, res) => {
+  try {
+    const { suggestionId } = req.params;
+    const { status, admin_notes } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: 'status is required' });
+    }
+
+    const validStatuses = ['pending', 'reviewed', 'in_progress', 'completed', 'rejected'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const updateData = { status };
+    if (admin_notes !== undefined) {
+      updateData.admin_notes = admin_notes;
+    }
+
+    const { data: suggestion, error } = await supabase
+      .from('suggestions')
+      .update(updateData)
+      .eq('id', suggestionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      suggestion,
+      message: 'Suggestion updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating suggestion:', error);
     res.status(500).json({ error: error.message });
   }
 });

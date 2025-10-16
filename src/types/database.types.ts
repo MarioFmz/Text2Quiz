@@ -325,6 +325,65 @@ export interface Database {
           attempt_snapshot?: any | null
         }
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          challenge_id: string | null
+          type: string
+          title: string
+          message: string
+          data: any | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          challenge_id?: string | null
+          type: string
+          title: string
+          message: string
+          data?: any | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          read?: boolean
+          data?: any | null
+        }
+      }
+      suggestions: {
+        Row: {
+          id: string
+          user_id: string | null
+          email: string | null
+          category: 'feature' | 'bug' | 'improvement' | 'other'
+          title: string
+          description: string
+          status: 'pending' | 'reviewed' | 'in_progress' | 'completed' | 'rejected'
+          admin_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          email?: string | null
+          category: 'feature' | 'bug' | 'improvement' | 'other'
+          title: string
+          description: string
+          status?: 'pending' | 'reviewed' | 'in_progress' | 'completed' | 'rejected'
+          admin_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          status?: 'pending' | 'reviewed' | 'in_progress' | 'completed' | 'rejected'
+          admin_notes?: string | null
+          updated_at?: string
+        }
+      }
     }
   }
 }
@@ -339,3 +398,5 @@ export type QuizLike = Database['public']['Tables']['quiz_likes']['Row']
 export type QuizReport = Database['public']['Tables']['quiz_reports']['Row']
 export type QuizChallenge = Database['public']['Tables']['quiz_challenges']['Row']
 export type ChallengeAttempt = Database['public']['Tables']['challenge_attempts']['Row']
+export type Notification = Database['public']['Tables']['notifications']['Row']
+export type Suggestion = Database['public']['Tables']['suggestions']['Row']

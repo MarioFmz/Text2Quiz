@@ -3,10 +3,13 @@ import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import ToastContainer from './ToastContainer.vue'
+import NotificationsDropdown from './NotificationsDropdown.vue'
+import SuggestionsModal from './SuggestionsModal.vue'
 
 const { user, signOut } = useAuth()
 const router = useRouter()
 const mobileMenuOpen = ref(false)
+const showSuggestionsModal = ref(false)
 
 const handleLogout = async () => {
   try {
@@ -82,6 +85,18 @@ const closeMobileMenu = () => {
 
             <!-- Separator -->
             <div class="h-6 w-px bg-gray-300 mx-2"></div>
+
+            <!-- Suggestions Button -->
+            <button
+              @click="showSuggestionsModal = true"
+              class="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm font-medium"
+              title="Buzón de Sugerencias"
+            >
+              💡
+            </button>
+
+            <!-- Notifications -->
+            <NotificationsDropdown :user-id="user?.id" />
 
             <router-link
               to="/profile"
@@ -202,6 +217,14 @@ const closeMobileMenu = () => {
             <!-- Divider -->
             <div class="h-px bg-gray-200 my-2"></div>
 
+            <!-- Suggestions Button -->
+            <button
+              @click="showSuggestionsModal = true; closeMobileMenu()"
+              class="w-full text-left px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              💡 Buzón de Sugerencias
+            </button>
+
             <router-link
               to="/profile"
               @click="closeMobileMenu"
@@ -248,6 +271,13 @@ const closeMobileMenu = () => {
 
     <!-- Toast Notifications -->
     <ToastContainer />
+
+    <!-- Suggestions Modal -->
+    <SuggestionsModal
+      :show="showSuggestionsModal"
+      :user-id="user?.id"
+      @close="showSuggestionsModal = false"
+    />
   </div>
 </template>
 
