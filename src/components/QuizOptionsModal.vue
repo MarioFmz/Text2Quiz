@@ -5,7 +5,7 @@ interface Props {
   show: boolean
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const emit = defineEmits<{
   generate: [options: { numQuestions: number; difficulty: 'easy' | 'medium' | 'hard'; name: string }]

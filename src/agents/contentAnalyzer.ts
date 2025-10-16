@@ -56,38 +56,6 @@ export class ContentAnalyzer {
   }
 
   /**
-   * Construye el prompt para análisis
-   */
-  private buildAnalysisPrompt(text: string): string {
-    return `
-Analiza el siguiente texto educativo y proporciona un análisis detallado.
-
-TEXTO:
-${text.substring(0, 4000)} ${text.length > 4000 ? '...' : ''}
-
-ANÁLISIS REQUERIDO:
-1. Identifica los 3-5 temas principales
-2. Determina el nivel de dificultad (easy, medium, hard)
-3. Sugiere cuántas preguntas serían apropiadas (5-20)
-4. Cuenta los conceptos clave que deben evaluarse
-5. Determina el nivel de lectura
-6. Proporciona un resumen breve (2-3 oraciones)
-
-FORMATO DE RESPUESTA (JSON):
-{
-  "mainTopics": ["Tema 1", "Tema 2", ...],
-  "difficulty": "easy" | "medium" | "hard",
-  "suggestedQuestionCount": número,
-  "keyConceptsCount": número,
-  "readingLevel": "Descripción del nivel",
-  "summary": "Resumen del contenido"
-}
-
-IMPORTANTE: Responde SOLO con el JSON, sin texto adicional.
-    `.trim()
-  }
-
-  /**
    * Análisis básico sin IA (fallback)
    */
   private basicAnalysis(text: string): ContentAnalysis {

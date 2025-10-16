@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import NotificationModal from './NotificationModal.vue'
 
 interface Props {
   quizId: string

@@ -66,7 +66,7 @@ export class DocumentProcessor {
       // Si no hay texto o es muy poco, es un PDF escaneado -> usar OCR
       if (!fullText || fullText.length < 50) {
         console.log('PDF appears to be scanned, using OCR fallback...')
-        return await this.processPDFWithOCR(pdf, file.name)
+        return await this.processPDFWithOCR(pdf)
       }
 
       return {
@@ -84,7 +84,7 @@ export class DocumentProcessor {
   /**
    * Procesa un PDF escaneado convirtiendo cada página a imagen y aplicando OCR
    */
-  private async processPDFWithOCR(pdf: pdfjsLib.PDFDocumentProxy, fileName: string): Promise<ProcessedDocument> {
+  private async processPDFWithOCR(pdf: pdfjsLib.PDFDocumentProxy): Promise<ProcessedDocument> {
     console.log(`Processing ${pdf.numPages} pages with OCR...`)
 
     const ocrPromises: Promise<string>[] = []

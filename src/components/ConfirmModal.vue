@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-
 interface Props {
   show: boolean
   title?: string
@@ -10,7 +8,7 @@ interface Props {
   confirmClass?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   title: 'Confirmar acción',
   message: '¿Estás seguro?',
   confirmText: 'Confirmar',
