@@ -2,12 +2,13 @@
 import AppLayout from '@/components/AppLayout.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { quizzesService } from '@/services/quizzesService'
 import type { Question } from '@/types'
 
 const { user } = useAuth()
 const route = useRoute()
+const router = useRouter()
 
 type PracticeMode = 'menu' | 'flashcards' | 'express' | 'daily'
 
@@ -206,14 +207,7 @@ const calculateResults = () => {
 }
 
 const backToMenu = () => {
-  mode.value = 'menu'
-  questions.value = []
-  currentIndex.value = 0
-  showAnswer.value = false
-  userAnswers.value = {}
-  showResults.value = false
-  knownCards.value = []
-  unknownCards.value = []
+  router.push('/dashboard')
 }
 
 const retryPractice = () => {
