@@ -54,6 +54,7 @@ export interface Database {
           is_verified: boolean
           summary?: string | null
           combined_content?: string | null
+          formatted_content?: string | null
         }
         Insert: {
           id?: string
@@ -73,6 +74,7 @@ export interface Database {
           is_verified?: boolean
           summary?: string | null
           combined_content?: string | null
+          formatted_content?: string | null
         }
         Update: {
           id?: string
@@ -91,6 +93,7 @@ export interface Database {
           is_verified?: boolean
           summary?: string | null
           combined_content?: string | null
+          formatted_content?: string | null
         }
       }
       quiz_categories: {
@@ -303,6 +306,7 @@ export interface Database {
           score: number
           total_questions: number
           completed_at: string
+          attempt_snapshot?: any | null
         }
         Insert: {
           id?: string
@@ -312,11 +316,13 @@ export interface Database {
           score: number
           total_questions: number
           completed_at?: string
+          attempt_snapshot?: any | null
         }
         Update: {
           id?: string
           score?: number
           total_questions?: number
+          attempt_snapshot?: any | null
         }
       }
     }

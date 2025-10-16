@@ -189,7 +189,8 @@ export class QuizzesService {
     documentId: string,
     quizId: string,
     score: number,
-    totalQuestions: number
+    totalQuestions: number,
+    attemptSnapshot?: any
   ): Promise<LearningProgress> {
     const { data, error } = await supabase
       .from('learning_progress')
@@ -198,7 +199,8 @@ export class QuizzesService {
         document_id: documentId,
         quiz_id: quizId,
         score,
-        total_questions: totalQuestions
+        total_questions: totalQuestions,
+        attempt_snapshot: attemptSnapshot || null
       })
       .select()
       .single()
@@ -316,6 +318,30 @@ export class QuizzesService {
 
     if (questionsError) throw questionsError
     return questions || []
+  }
+
+  /**
+   * Regenera las preguntas de un quiz
+   */
+  async regenerateQuestions(quizId: string, userId: string): Promise<{ quiz: Quiz, questions: Question[] }> {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/quizzes/${quizId}/regenerate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Error regenerating questions')
+    }
+
+    const data = await response.json()
+    return {
+      quiz: data.quiz,
+      questions: data.questions
+    }
   }
 }
 

@@ -131,6 +131,9 @@ app.post('/api/generate-quiz', async (req, res) => {
       console.log(`Summary preview: ${generatedQuiz.summary.substring(0, 100)}...`);
     }
 
+    // Generate formatted study material
+    const formattedContent = await generateFormattedContent(document.extracted_text);
+
     // Save quiz to database
     const { data: savedQuiz, error: quizError } = await supabase
       .from('quizzes')
@@ -140,7 +143,9 @@ app.post('/api/generate-quiz', async (req, res) => {
         title: name || generatedQuiz.title, // Usar nombre personalizado si está disponible
         difficulty: generatedQuiz.difficulty,
         total_questions: generatedQuiz.questions.length,
-        summary: generatedQuiz.summary || 'Repasa los conceptos clave antes de comenzar el quiz.'
+        summary: generatedQuiz.summary || 'Repasa los conceptos clave antes de comenzar el quiz.',
+        combined_content: document.extracted_text, // Store original text for regeneration
+        formatted_content: formattedContent // Store formatted text for display
       })
       .select()
       .single();
@@ -252,6 +257,9 @@ app.post('/api/quizzes/create-from-multiple', async (req, res) => {
     const generatedQuiz = JSON.parse(content);
     console.log(`Quiz generated: ${generatedQuiz.questions.length} questions`);
 
+    // Generate formatted study material
+    const formattedContent = await generateFormattedContent(combinedText);
+
     // Save quiz to database (without document_id, using new model)
     const { data: savedQuiz, error: quizError } = await supabase
       .from('quizzes')
@@ -261,7 +269,8 @@ app.post('/api/quizzes/create-from-multiple', async (req, res) => {
         difficulty: generatedQuiz.difficulty,
         total_questions: generatedQuiz.questions.length,
         summary: generatedQuiz.summary || 'Repasa los conceptos clave antes de comenzar el quiz.',
-        combined_content: combinedText // Store combined content
+        combined_content: combinedText, // Store combined content for regeneration
+        formatted_content: formattedContent // Store formatted text for display
       })
       .select()
       .single();
@@ -388,6 +397,179 @@ FORMATO DE RESPUESTA (JSON):
 IMPORTANTE: Responde SOLO con el JSON, sin texto adicional.
   `.trim();
 }
+
+// Generate formatted, readable content from extracted text for study material
+async function generateFormattedContent(rawText) {
+  try {
+    console.log('Generating formatted study material...');
+
+    const prompt = `
+Eres un experto en crear materiales de estudio bien formateados. Toma el siguiente texto extraído de un PDF (que puede contener errores de formato, caracteres extraños, etc.) y conviértelo en contenido de estudio limpio, bien organizado y fácil de leer.
+
+TEXTO ORIGINAL:
+${rawText.substring(0, 8000)} ${rawText.length > 8000 ? '...' : ''}
+
+INSTRUCCIONES:
+1. Limpia el texto eliminando caracteres extraños, símbolos raros y errores de formato
+2. Organiza la información en secciones claras con encabezados descriptivos
+3. Usa listas con viñetas (•) cuando sea apropiado para mejor legibilidad
+4. Mantén toda la información importante del contenido original
+5. Corrige errores ortográficos y gramaticales evidentes
+6. Formato el texto de manera profesional y académica
+7. NO agregues información que no esté en el texto original
+8. NO uses formato markdown (**, ##, etc) - solo texto plano con estructura clara
+
+IMPORTANTE: Responde SOLO con el texto formateado, sin introducción ni comentarios adicionales.`.trim();
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un experto en formatear y limpiar contenido educativo. Tu tarea es tomar texto mal formateado y convertirlo en material de estudio claro y bien organizado.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3, // Lower temperature for more consistent formatting
+      max_tokens: 3000
+    });
+
+    const formattedContent = completion.choices[0].message.content;
+
+    if (!formattedContent || formattedContent.trim().length === 0) {
+      console.log('Warning: No formatted content generated, using original text');
+      return rawText.substring(0, 3000); // Fallback to truncated original
+    }
+
+    console.log(`Formatted content generated: ${formattedContent.length} characters`);
+    return formattedContent;
+
+  } catch (error) {
+    console.error('Error generating formatted content:', error);
+    // Return truncated original text as fallback
+    return rawText.substring(0, 3000) + '\n\n[Contenido truncado]';
+  }
+}
+
+// Regenerate quiz questions
+app.post('/api/quizzes/:quizId/regenerate', async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    console.log(`Regenerating questions for quiz ${quizId}...`);
+
+    // Get quiz and verify ownership
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    if (quiz.user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to regenerate this quiz' });
+    }
+
+    // Get content to regenerate from
+    let content = quiz.combined_content;
+
+    // If no combined_content, get from document
+    if (!content && quiz.document_id) {
+      const { data: document } = await supabase
+        .from('documents')
+        .select('extracted_text')
+        .eq('id', quiz.document_id)
+        .single();
+
+      content = document?.extracted_text;
+    }
+
+    if (!content) {
+      return res.status(400).json({ error: 'No content available to regenerate questions' });
+    }
+
+    console.log(`Found content: ${content.length} characters`);
+
+    // Delete existing questions
+    const { error: deleteError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('quiz_id', quizId);
+
+    if (deleteError) throw deleteError;
+    console.log('Existing questions deleted');
+
+    // Generate new questions with OpenAI
+    const prompt = buildQuizPrompt(content, quiz.total_questions, quiz.difficulty);
+
+    console.log('Calling OpenAI API for new questions...');
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un experto en educación que crea quizzes educativos de alta calidad. Debes generar preguntas que ayuden a evaluar la comprensión profunda del material. Siempre responde con JSON válido.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.7
+    });
+
+    const openaiContent = completion.choices[0].message.content;
+    if (!openaiContent) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const generatedQuiz = JSON.parse(openaiContent);
+    console.log(`Generated ${generatedQuiz.questions.length} new questions`);
+
+    // Insert new questions
+    const questionsToInsert = generatedQuiz.questions.map((q, index) => ({
+      quiz_id: quizId,
+      question_text: q.question_text,
+      question_type: q.question_type,
+      correct_answer: q.correct_answer,
+      options: q.options,
+      explanation: q.explanation,
+      order: index + 1
+    }));
+
+    const { data: newQuestions, error: questionsError } = await supabase
+      .from('questions')
+      .insert(questionsToInsert)
+      .select();
+
+    if (questionsError) throw questionsError;
+
+    console.log('New questions saved successfully');
+
+    res.json({
+      success: true,
+      quiz,
+      questions: newQuestions,
+      message: 'Questions regenerated successfully'
+    });
+  } catch (error) {
+    console.error('Error regenerating quiz questions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ============================================
 // CHALLENGES & SHARING ENDPOINTS
@@ -933,28 +1115,80 @@ app.post('/api/challenges/:challengeId/attempt', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Guardar intento
-    const { data: attempt, error: attemptError } = await supabase
-      .from('challenge_attempts')
-      .insert({
-        challenge_id: challengeId,
-        user_id: userId || null,
-        username,
-        score,
-        total_questions: totalQuestions,
-        time_taken: timeTaken
-      })
-      .select()
-      .single();
+    let attempt;
 
-    if (attemptError) throw attemptError;
-
-    // Si hay usuario, actualizar racha
+    // Si hay userId, verificar si ya existe un intento previo
     if (userId) {
-      await supabase.rpc('update_user_streak', { p_user_id: userId });
-    }
+      const { data: existingAttempt } = await supabase
+        .from('challenge_attempts')
+        .select('*')
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    console.log(`Challenge attempt saved: ${username} - ${score}/${totalQuestions}`);
+      if (existingAttempt) {
+        // Si la nueva puntuación es MAYOR, actualizar el intento
+        if (score > existingAttempt.score) {
+          const { data: updatedAttempt, error: updateError } = await supabase
+            .from('challenge_attempts')
+            .update({
+              score,
+              time_taken: timeTaken,
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', existingAttempt.id)
+            .select()
+            .single();
+
+          if (updateError) throw updateError;
+          attempt = updatedAttempt;
+          console.log(`Challenge attempt updated (better score): ${username} - ${score}/${totalQuestions} (previous: ${existingAttempt.score})`);
+        } else {
+          // Si la puntuación no es mejor, no hacer nada y retornar el intento existente
+          attempt = existingAttempt;
+          console.log(`Challenge attempt not updated (score not improved): ${username} - ${score}/${totalQuestions} (best: ${existingAttempt.score})`);
+        }
+      } else {
+        // No existe intento previo, crear uno nuevo
+        const { data: newAttempt, error: attemptError } = await supabase
+          .from('challenge_attempts')
+          .insert({
+            challenge_id: challengeId,
+            user_id: userId,
+            username,
+            score,
+            total_questions: totalQuestions,
+            time_taken: timeTaken
+          })
+          .select()
+          .single();
+
+        if (attemptError) throw attemptError;
+        attempt = newAttempt;
+        console.log(`Challenge attempt created: ${username} - ${score}/${totalQuestions}`);
+      }
+
+      // Actualizar racha del usuario
+      await supabase.rpc('update_user_streak', { p_user_id: userId });
+    } else {
+      // Usuario anónimo - siempre crear nuevo intento
+      const { data: newAttempt, error: attemptError } = await supabase
+        .from('challenge_attempts')
+        .insert({
+          challenge_id: challengeId,
+          user_id: null,
+          username,
+          score,
+          total_questions: totalQuestions,
+          time_taken: timeTaken
+        })
+        .select()
+        .single();
+
+      if (attemptError) throw attemptError;
+      attempt = newAttempt;
+      console.log(`Anonymous challenge attempt saved: ${username} - ${score}/${totalQuestions}`);
+    }
 
     res.json({
       success: true,
@@ -1780,6 +2014,89 @@ app.post('/api/quizzes/:quizId/get-or-create-challenge', async (req, res) => {
 // ============================================
 // USER PROFILE ENDPOINTS
 // ============================================
+
+// Get user streak
+app.get('/api/users/:userId/streak', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('current_streak, longest_streak, last_activity_date')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      streak: {
+        current_streak: profile?.current_streak || 0,
+        longest_streak: profile?.longest_streak || 0,
+        last_activity_date: profile?.last_activity_date
+      }
+    });
+  } catch (error) {
+    console.error('Error getting user streak:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user streak (for daily challenges and practice modes)
+app.post('/api/users/:userId/update-streak', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { score, totalQuestions } = req.body;
+
+    // Calculate percentage if score and totalQuestions are provided
+    let percentage = 100;
+    if (score !== undefined && totalQuestions !== undefined) {
+      percentage = Math.round((score / totalQuestions) * 100);
+    }
+
+    // Only update streak if score is >= 70% or if no score provided
+    if (percentage >= 70) {
+      // Call the stored procedure to update streak
+      const { error } = await supabase.rpc('update_user_streak', {
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+      console.log(`Streak updated for user ${userId}: passed with ${percentage}%`);
+    } else {
+      // Score < 70%, reset streak to 0
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          current_streak: 0,
+          last_activity_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      console.log(`Streak reset for user ${userId}: failed with ${percentage}%`);
+    }
+
+    // Get updated streak
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('current_streak, longest_streak, last_activity_date')
+      .eq('user_id', userId)
+      .single();
+
+    res.json({
+      success: true,
+      streak: {
+        current_streak: profile?.current_streak || 0,
+        longest_streak: profile?.longest_streak || 0,
+        last_activity_date: profile?.last_activity_date
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user streak:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get user profile
 app.get('/api/profile/:userId', async (req, res) => {

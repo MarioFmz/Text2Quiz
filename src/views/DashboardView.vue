@@ -73,13 +73,19 @@ const loadUserStreak = async () => {
   if (!user.value) return
 
   try {
-    // TODO: Load user streak from API
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const response = await fetch(`${apiUrl}/api/users/${user.value.id}/streak`)
+
+    if (response.ok) {
+      const data = await response.json()
+      userStreak.value = data.streak
+    }
+  } catch (error) {
+    console.error('Error loading streak:', error)
     userStreak.value = {
       current_streak: 0,
       longest_streak: 0
     }
-  } catch (error) {
-    console.error('Error loading streak:', error)
   }
 }
 
@@ -190,23 +196,43 @@ const selectAnswer = (questionId: string, answer: string) => {
   }, 300)
 }
 
-const finishQuiz = () => {
+const finishQuiz = async () => {
   showResults.value = true
 
   // Update streak if daily challenge
   if (practiceMode.value === 'daily') {
-    updateStreak()
+    await updateStreak()
   }
 }
 
 const updateStreak = async () => {
-  // TODO: Update streak via API
+  if (!user.value) return
+
   const results = calculateResults()
-  if (results.percentage >= 70) {
-    userStreak.value.current_streak++
-    if (userStreak.value.current_streak > userStreak.value.longest_streak) {
-      userStreak.value.longest_streak = userStreak.value.current_streak
+
+  // Actualizar la racha enviando el score al backend
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const response = await fetch(`${apiUrl}/api/users/${user.value.id}/update-streak`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        score: results.correct,
+        totalQuestions: questions.value.length
+      })
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      userStreak.value = data.streak
+      console.log('Streak updated:', data.streak, `Score: ${results.percentage}%`)
     }
+  } catch (error) {
+    console.error('Error updating streak:', error)
+    // Si falla, al menos recargar la racha actual
+    await loadUserStreak()
   }
 }
 

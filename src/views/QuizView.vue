@@ -36,6 +36,10 @@ const attemptAnswers = ref<Record<string, any>>({})
 const loadingAttempt = ref<string | null>(null)
 const showStudyMaterial = ref(false)
 
+// Regeneration modal
+const showRegenerateModal = ref(false)
+const regenerating = ref(false)
+
 // Global leaderboard
 const globalLeaderboard = ref<any[]>([])
 const loadingLeaderboard = ref(false)
@@ -129,14 +133,36 @@ const submitQuiz = async () => {
       q => userAnswers.value[q.id] === q.correct_answer
     ).length
 
-    // Guardar progreso
+    // Crear snapshot del intento con preguntas y respuestas
+    const attemptSnapshot = {
+      questions: questions.value.map(q => ({
+        id: q.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        user_answer: userAnswers.value[q.id] || null,
+        is_correct: userAnswers.value[q.id] === q.correct_answer
+      })),
+      completed_at: new Date().toISOString(),
+      time_taken: quizTimeTaken.value
+    }
+
+    // Guardar progreso con snapshot
     await quizzesService.saveProgress(
       user.value.id,
       quiz.value.document_id,
       quizId,
       correctCount,
-      questions.value.length
+      questions.value.length,
+      attemptSnapshot
     )
+
+    // Recargar intentos previos para actualizar la lista
+    if (user.value) {
+      previousAttempts.value = await quizzesService.getQuizAttempts(user.value.id, quizId)
+    }
 
     // Guardar automáticamente en el global challenge si existe
     if (quiz.value.global_challenge_id) {
@@ -189,11 +215,19 @@ const calculateResults = () => {
   }
 }
 
-const restartQuiz = () => {
+const restartQuiz = async () => {
   userAnswers.value = {}
   currentQuestionIndex.value = 0
   showResults.value = false
   showSummary.value = true // Volver a mostrar el resumen
+
+  // Recargar intentos previos y leaderboard
+  if (user.value) {
+    previousAttempts.value = await quizzesService.getQuizAttempts(user.value.id, quizId)
+  }
+  if (quiz.value?.global_challenge_id) {
+    await loadGlobalLeaderboard()
+  }
 }
 
 const goToDocuments = () => {
@@ -201,8 +235,42 @@ const goToDocuments = () => {
 }
 
 const startQuiz = () => {
+  // Si el usuario ya completó el quiz antes, preguntar si quiere nuevas preguntas
+  if (previousAttempts.value.length > 0) {
+    showRegenerateModal.value = true
+  } else {
+    // Primera vez, comenzar directamente
+    beginQuiz()
+  }
+}
+
+const beginQuiz = () => {
   showSummary.value = false
+  showRegenerateModal.value = false
   quizStartTime.value = Date.now()
+}
+
+const regenerateAndStart = async () => {
+  if (!user.value) return
+
+  regenerating.value = true
+  try {
+    const regeneratedData = await quizzesService.regenerateQuestions(quizId, user.value.id)
+    questions.value = regeneratedData.questions
+    console.log('Preguntas regeneradas exitosamente')
+    beginQuiz()
+  } catch (error: any) {
+    console.error('Error regenerando preguntas:', error)
+    // Mostrar error amigable y continuar con preguntas existentes
+    const errorMessage = error?.response?.data?.error || error.message
+    if (errorMessage?.includes('No content available')) {
+      console.warn('Este quiz no tiene el contenido guardado para regenerar preguntas. Usando las preguntas existentes.')
+    }
+    // Si falla la regeneración, usar las preguntas existentes
+    beginQuiz()
+  } finally {
+    regenerating.value = false
+  }
 }
 
 const formatDate = (dateString: string) => {
@@ -515,8 +583,8 @@ const triggerConfetti = () => {
             <p class="text-sm sm:text-base text-gray-700 whitespace-pre-line">{{ quiz.summary || 'Repasa los conceptos principales antes de comenzar el quiz.' }}</p>
           </div>
 
-          <!-- Study Material Section (if combined_content exists) -->
-          <div v-if="quiz.combined_content" class="mb-6 sm:mb-8">
+          <!-- Study Material Section (if formatted_content exists) -->
+          <div v-if="quiz.formatted_content" class="mb-6 sm:mb-8">
             <button
               @click="showStudyMaterial = !showStudyMaterial"
               class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg transition-all duration-200 border-2 border-blue-200"
@@ -524,8 +592,8 @@ const triggerConfetti = () => {
               <div class="flex items-center space-x-3">
                 <span class="text-2xl">📖</span>
                 <div class="text-left">
-                  <h3 class="font-bold text-gray-900">Material de Estudio Completo</h3>
-                  <p class="text-xs sm:text-sm text-gray-600">Contenido del documento original</p>
+                  <h3 class="font-bold text-gray-900">Material de Estudio</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Contenido formateado para tu repaso</p>
                 </div>
               </div>
               <svg
@@ -541,10 +609,10 @@ const triggerConfetti = () => {
 
             <!-- Collapsible Content -->
             <Transition name="expand">
-              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg">
+              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg shadow-sm">
                 <div class="prose prose-sm sm:prose max-w-none">
                   <div class="text-sm sm:text-base text-gray-800 whitespace-pre-line leading-relaxed">
-                    {{ quiz.combined_content }}
+                    {{ quiz.formatted_content }}
                   </div>
                 </div>
               </div>
@@ -673,7 +741,32 @@ const triggerConfetti = () => {
               <!-- Attempt Details (expandable) -->
               <Transition name="expand">
                 <div v-if="expandedAttemptId === attempt.id" class="border-t border-gray-200">
-                  <div v-if="loadingAttempt === attempt.id" class="p-4 text-center text-gray-600">
+                  <!-- Mostrar preguntas desde el snapshot del intento -->
+                  <div v-if="attempt.attempt_snapshot?.questions" class="p-4 space-y-3">
+                    <h4 class="font-semibold text-sm mb-3">Revisión de respuestas:</h4>
+                    <div
+                      v-for="(question, qIndex) in attempt.attempt_snapshot.questions"
+                      :key="qIndex"
+                      class="text-sm bg-white p-3 rounded-lg"
+                    >
+                      <div class="flex items-start gap-2">
+                        <span class="text-lg flex-shrink-0">
+                          {{ question.is_correct ? '✅' : '❌' }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <p class="font-medium mb-1">{{ qIndex + 1 }}. {{ question.question_text }}</p>
+                          <p class="text-xs text-gray-600 mb-1">
+                            <strong>Tu respuesta:</strong> {{ question.user_answer || 'Sin responder' }}
+                          </p>
+                          <p class="text-xs text-green-700">
+                            <strong>Respuesta correcta:</strong> {{ question.correct_answer }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Fallback para intentos antiguos sin snapshot -->
+                  <div v-else-if="loadingAttempt === attempt.id" class="p-4 text-center text-gray-600">
                     Cargando respuestas...
                   </div>
                   <div v-else-if="attemptAnswers[attempt.id]" class="p-4 space-y-3">
@@ -1033,6 +1126,47 @@ const triggerConfetti = () => {
                 :disabled="deleting"
               >
                 {{ deleting ? 'Eliminando...' : 'Eliminar definitivamente' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Regenerate Questions Modal -->
+      <Transition name="fade">
+        <div
+          v-if="showRegenerateModal"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          @click.self="showRegenerateModal = false"
+        >
+          <div class="bg-white rounded-lg max-w-lg w-full p-6">
+            <div class="text-center mb-6">
+              <div class="text-5xl mb-4">🔄</div>
+              <h2 class="text-2xl font-bold mb-2">¿Practicar con nuevas preguntas?</h2>
+              <p class="text-gray-600 mb-4">
+                Ya has completado este quiz anteriormente. ¿Quieres practicar con preguntas nuevas generadas del mismo contenido o usar las mismas preguntas?
+              </p>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-left">
+                <p class="text-blue-900">
+                  <strong>💡 Consejo:</strong> Las nuevas preguntas te ayudarán a evaluar mejor tu conocimiento del tema desde diferentes ángulos.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button
+                @click="beginQuiz"
+                class="flex-1 px-4 py-3 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors font-medium"
+                :disabled="regenerating"
+              >
+                📝 Mismas preguntas
+              </button>
+              <button
+                @click="regenerateAndStart"
+                class="flex-1 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 transition-colors font-medium"
+                :disabled="regenerating"
+              >
+                {{ regenerating ? '⏳ Generando...' : '✨ Nuevas preguntas' }}
               </button>
             </div>
           </div>
