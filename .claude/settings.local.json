@@ -20,7 +20,9 @@
       "Bash(git reset:*)",
       "Bash(vercel:*)",
       "Read(//Users/mario/Desktop/**)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git revert:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

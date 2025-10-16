@@ -63,6 +63,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/practice',
+    name: 'practice',
+    component: () => import('@/views/QuickPracticeView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/my-challenges',
     name: 'my-challenges',
     component: () => import('@/views/MyChallengesView.vue'),
