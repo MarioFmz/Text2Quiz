@@ -517,11 +517,7 @@ const triggerConfetti = () => {
 <template>
   <AppLayout>
     <div class="max-w-4xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
-      <div v-if="loading" class="text-center py-12">
-        <p class="text-gray-600">Cargando desafío...</p>
-      </div>
-
-      <!-- Modal: Restore Progress -->
+      <!-- Modal: Restore Progress (outside conditional chain) -->
       <Transition name="fade">
         <div
           v-if="showProgressModal && savedProgressData"
@@ -557,6 +553,11 @@ const triggerConfetti = () => {
           </div>
         </div>
       </Transition>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <p class="text-gray-600">Cargando desafío...</p>
+      </div>
 
       <!-- Results View -->
       <div v-else-if="showResults" class="space-y-4 sm:space-y-6">
