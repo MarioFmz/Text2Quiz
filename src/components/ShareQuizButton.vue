@@ -18,6 +18,7 @@ const loading = ref(false)
 const shareUrl = ref('')
 const copied = ref(false)
 const creatorPercentage = ref(props.creatorScore !== undefined ? Math.round((props.creatorScore / props.totalQuestions) * 100) : 0)
+const isExistingChallenge = ref(false)
 
 const showError = ref(false)
 const errorMessage = ref('')
@@ -45,6 +46,7 @@ const generateShareLink = async () => {
 
     const data = await response.json()
     shareUrl.value = `${window.location.origin}/challenge/${data.share_slug}`
+    isExistingChallenge.value = data.isExisting || false
     showModal.value = true
   } catch (error) {
     console.error('Error generating share link:', error)
@@ -70,6 +72,7 @@ const copyToClipboard = async (text: string) => {
 const closeModal = () => {
   showModal.value = false
   copied.value = false
+  isExistingChallenge.value = false
 }
 </script>
 
@@ -131,6 +134,20 @@ const closeModal = () => {
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-600 mb-1">Quiz a compartir:</p>
                 <p class="font-semibold text-gray-900">{{ quizTitle }}</p>
+              </div>
+
+              <!-- Existing Challenge Notice -->
+              <div v-if="isExistingChallenge" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start space-x-3">
+                  <span class="text-xl">ℹ️</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-blue-800 mb-1">Enlace existente</p>
+                    <p class="text-xs text-blue-700">
+                      Ya habías compartido este quiz antes. Estamos reutilizando el mismo enlace para mantener
+                      todas las participaciones en un solo lugar.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <!-- Share URL -->

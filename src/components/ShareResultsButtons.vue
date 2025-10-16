@@ -51,6 +51,12 @@ const generateChallengeUrl = async (): Promise<string> => {
 
     const data = await response.json()
     challengeUrl.value = `${window.location.origin}/challenge/${data.share_slug}`
+
+    // Mostrar mensaje diferente si se reutilizó un challenge existente
+    if (data.isExisting) {
+      success('Compartiendo tu desafío existente')
+    }
+
     return challengeUrl.value
   } catch (err) {
     console.error('Error generating challenge:', err)
