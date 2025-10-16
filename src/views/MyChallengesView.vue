@@ -342,7 +342,7 @@ const topRankings = computed(() =>
                   @click="router.push(`/challenge/${ranking.share_slug}`)"
                   class="btn btn-secondary w-full text-xs sm:text-sm py-2"
                 >
-                  Ver Ranking Completo
+                  Ver Desafío
                 </button>
               </div>
             </div>

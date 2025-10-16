@@ -477,8 +477,28 @@ app.post('/api/quizzes/:quizId/regenerate', async (req, res) => {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
-    if (quiz.user_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to regenerate this quiz' });
+    // Allow regeneration if:
+    // 1. User is the owner, OR
+    // 2. Quiz has a global_challenge_id (it's a public quiz with challenges), OR
+    // 3. There's any challenge for this quiz
+    const isOwner = quiz.user_id === userId;
+    const hasGlobalChallenge = !!quiz.global_challenge_id;
+
+    if (!isOwner && !hasGlobalChallenge) {
+      // As a fallback, check if there's ANY challenge for this quiz
+      const { data: anyChallenge } = await supabase
+        .from('quiz_challenges')
+        .select('id')
+        .eq('quiz_id', quizId)
+        .maybeSingle();
+
+      if (!anyChallenge) {
+        return res.status(403).json({ error: 'Not authorized to regenerate this quiz' });
+      }
+
+      console.log(`Allowing regeneration for challenge participant (challenge ${anyChallenge.id})`);
+    } else if (hasGlobalChallenge) {
+      console.log(`Allowing regeneration for global challenge (${quiz.global_challenge_id})`);
     }
 
     // Get content to regenerate from

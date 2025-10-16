@@ -472,11 +472,12 @@ const restartQuiz = async () => {
   regeneratingQuestions.value = true
 
   try {
-    showNotif('info', 'Regenerando preguntas del desafío...', 'Por favor espera')
-
     const response = await fetch(`${apiUrl}/api/quizzes/${quiz.value.id}/regenerate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.value?.id
+      })
     })
 
     if (!response.ok) {
@@ -485,8 +486,6 @@ const restartQuiz = async () => {
 
     // Reload challenge data to get new questions
     await loadChallenge()
-
-    showNotif('success', '¡Nuevas preguntas generadas! Todos los participantes tendrán preguntas actualizadas.', 'Desafío actualizado')
   } catch (error) {
     console.error('Error regenerating questions:', error)
     showNotif('error', 'No se pudieron regenerar las preguntas. Se usarán las preguntas actuales.')
@@ -494,13 +493,14 @@ const restartQuiz = async () => {
     regeneratingQuestions.value = false
   }
 
-  // Reset quiz state
+  // Reset quiz state and start immediately
   await clearSavedProgress()
   userAnswers.value = {}
   currentQuestionIndex.value = 0
   showResults.value = false
-  showSummary.value = true
-  stopAutoSave()
+  showSummary.value = false // Start quiz immediately
+  quizStartTime.value = Date.now()
+  startAutoSave()
 }
 
 const startQuiz = () => {
@@ -651,6 +651,9 @@ const triggerConfetti = () => {
           </div>
 
           <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+            <button @click="showResults = false; showSummary = true" class="btn btn-secondary w-full sm:w-auto">
+              Ver Desafío
+            </button>
             <button @click="toggleLeaderboard" class="btn btn-primary w-full sm:w-auto">
               {{ showLeaderboard ? 'Ocultar' : 'Ver' }} Ranking
             </button>
@@ -979,13 +982,22 @@ const triggerConfetti = () => {
           </div>
 
           <button
-            @click="startQuiz"
-            :disabled="!username.trim()"
+            @click="hasCompletedBefore ? restartQuiz() : startQuiz()"
+            :disabled="!username.trim() || regeneratingQuestions"
             class="btn btn-primary w-full text-base sm:text-lg py-4 sm:py-5 font-bold transform hover:scale-105 transition-all shadow-xl hover:shadow-2xl disabled:transform-none disabled:hover:scale-100"
-            :class="{ 'opacity-50 cursor-not-allowed': !username.trim() }"
+            :class="{ 'opacity-50 cursor-not-allowed': !username.trim() || regeneratingQuestions }"
           >
-            <span class="text-xl mr-2">🚀</span>
-            {{ startButtonText }}
+            <span v-if="regeneratingQuestions" class="flex items-center justify-center gap-2">
+              <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Regenerando...</span>
+            </span>
+            <span v-else>
+              <span class="text-xl mr-2">🚀</span>
+              {{ startButtonText }}
+            </span>
           </button>
 
           <p v-if="username && !challenge.is_anonymous" class="text-xs sm:text-sm text-gray-500 mt-3 text-center">
