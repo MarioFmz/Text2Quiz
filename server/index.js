@@ -899,9 +899,14 @@ app.post('/api/auth/change-password', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Text2Quiz API Server running on http://localhost:${PORT}`);
-  console.log(`✅ OpenAI API Key configured: ${!!process.env.VITE_OPENAI_API_KEY}`);
-  console.log(`✅ Supabase configured: ${!!process.env.VITE_SUPABASE_URL}`);
-});
+// Start server (solo para desarrollo local)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`✅ Text2Quiz API Server running on http://localhost:${PORT}`);
+    console.log(`✅ OpenAI API Key configured: ${!!process.env.VITE_OPENAI_API_KEY}`);
+    console.log(`✅ Supabase configured: ${!!process.env.VITE_SUPABASE_URL}`);
+  });
+}
+
+// Exportar app para Vercel serverless
+module.exports = app;
