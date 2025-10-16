@@ -122,9 +122,14 @@ const inactiveChallenges = computed(() => {
             >
               <!-- Challenge Header -->
               <div class="mb-4">
-                <h3 class="font-bold text-lg text-gray-900 mb-2">
-                  {{ challenge.quiz_title }}
-                </h3>
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <h3 class="font-bold text-lg text-gray-900 flex-1">
+                    {{ challenge.quiz_title }}
+                  </h3>
+                  <span v-if="challenge.is_anonymous" class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap" title="Desafío anónimo">
+                    <span>🔒</span>
+                  </span>
+                </div>
                 <div class="flex items-center space-x-2 text-sm text-gray-500">
                   <span>📅 {{ formatDate(challenge.created_at) }}</span>
                 </div>
@@ -200,9 +205,14 @@ const inactiveChallenges = computed(() => {
               :key="challenge.id"
               class="card opacity-60"
             >
-              <h3 class="font-bold text-gray-900 mb-2">
-                {{ challenge.quiz_title }}
-              </h3>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-bold text-gray-900 flex-1">
+                  {{ challenge.quiz_title }}
+                </h3>
+                <span v-if="challenge.is_anonymous" class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap" title="Desafío anónimo">
+                  <span>🔒</span>
+                </span>
+              </div>
               <p class="text-sm text-gray-500 mb-3">
                 📅 {{ formatDate(challenge.created_at) }}
               </p>

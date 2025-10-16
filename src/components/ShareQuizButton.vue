@@ -19,6 +19,7 @@ const shareUrl = ref('')
 const copied = ref(false)
 const creatorPercentage = ref(props.creatorScore !== undefined ? Math.round((props.creatorScore / props.totalQuestions) * 100) : 0)
 const isExistingChallenge = ref(false)
+const isAnonymous = ref(false)
 
 const showError = ref(false)
 const errorMessage = ref('')
@@ -36,7 +37,8 @@ const generateShareLink = async () => {
         creatorUsername: props.creatorUsername,
         creatorScore: props.creatorScore || 0,
         totalQuestions: props.totalQuestions,
-        timeTaken: props.timeTaken || 0
+        timeTaken: props.timeTaken || 0,
+        isAnonymous: isAnonymous.value
       })
     })
 
@@ -73,6 +75,7 @@ const closeModal = () => {
   showModal.value = false
   copied.value = false
   isExistingChallenge.value = false
+  isAnonymous.value = false
 }
 </script>
 
@@ -134,6 +137,27 @@ const closeModal = () => {
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-600 mb-1">Quiz a compartir:</p>
                 <p class="font-semibold text-gray-900">{{ quizTitle }}</p>
+              </div>
+
+              <!-- Anonymous Mode Toggle -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <label class="flex items-start space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="isAnonymous"
+                    class="mt-1 w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                  />
+                  <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                      <span class="text-lg">🔒</span>
+                      <span class="font-semibold text-gray-900">Modo Anónimo</span>
+                    </div>
+                    <p class="text-xs text-gray-600">
+                      Los participantes aparecerán como "Participante #1", "Participante #2", etc.
+                      Útil para evaluaciones privadas.
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <!-- Existing Challenge Notice -->

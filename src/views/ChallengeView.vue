@@ -135,6 +135,11 @@ const loadLeaderboard = async () => {
       const data = await response.json()
       leaderboard.value = data.leaderboard
 
+      // Guardar si el challenge es anónimo
+      if (challenge.value) {
+        challenge.value.is_anonymous = data.is_anonymous || false
+      }
+
       // Encontrar el intento del creador
       creatorAttempt.value = leaderboard.value.find((attempt: any) => attempt.is_creator)
     }
@@ -242,6 +247,14 @@ const getRankEmoji = (rank: number) => {
   return `#${rank}`
 }
 
+// Función para obtener el nombre a mostrar (anónimo o real)
+const getDisplayName = (entry: any, index: number) => {
+  if (challenge.value?.is_anonymous) {
+    return `Participante #${index + 1}`
+  }
+  return entry.username
+}
+
 const triggerConfetti = () => {
   // Crear múltiples explosiones de confeti
   const positions = [
@@ -309,8 +322,12 @@ const triggerConfetti = () => {
           <p class="text-sm sm:text-base text-gray-600 mb-2">
             {{ calculateResults().correct }} de {{ questions.length }} respuestas correctas
           </p>
-          <p class="text-xs sm:text-sm text-gray-500 mb-6">
+          <p v-if="!challenge.is_anonymous" class="text-xs sm:text-sm text-gray-500 mb-6">
             Participante: <strong>{{ username }}</strong>
+          </p>
+          <p v-else class="text-xs sm:text-sm text-gray-500 mb-6 flex items-center justify-center gap-1">
+            <span>🔒</span>
+            <span>Desafío anónimo</span>
           </p>
 
           <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -356,7 +373,7 @@ const triggerConfetti = () => {
                 </span>
                 <div>
                   <div class="flex items-center space-x-2">
-                    <p class="font-semibold">{{ entry.username }}</p>
+                    <p class="font-semibold">{{ getDisplayName(entry, index) }}</p>
                     <span v-if="entry.is_creator" class="text-lg" title="Creador del desafío">👑</span>
                   </div>
                   <p class="text-xs text-gray-500">{{ entry.time_taken }}s</p>
@@ -494,8 +511,13 @@ const triggerConfetti = () => {
             <!-- Versus Layout -->
             <div class="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border-2 border-white/50">
               <div class="text-center mb-4">
-                <p class="text-sm text-gray-600 mb-2">Creado por</p>
-                <h3 class="text-xl sm:text-2xl font-black text-gray-900">{{ creatorAttempt.username }}</h3>
+                <p class="text-sm text-gray-600 mb-2 flex items-center justify-center gap-1">
+                  <span v-if="challenge.is_anonymous">🔒</span>
+                  <span>Creado por</span>
+                </p>
+                <h3 class="text-xl sm:text-2xl font-black text-gray-900">
+                  {{ challenge.is_anonymous ? 'Participante #1' : creatorAttempt.username }}
+                </h3>
               </div>
 
               <!-- Score prominente -->
@@ -540,7 +562,7 @@ const triggerConfetti = () => {
             <div v-if="leaderboard[0]"
                  class="order-1 sm:order-2 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-4 text-center transform sm:scale-110 border-4 border-yellow-300 shadow-xl">
               <div class="text-4xl mb-2">🥇</div>
-              <div class="font-black text-white text-lg mb-1 truncate">{{ leaderboard[0].username }}</div>
+              <div class="font-black text-white text-lg mb-1 truncate">{{ getDisplayName(leaderboard[0], 0) }}</div>
               <div class="text-3xl font-black text-white mb-1">{{ leaderboard[0].percentage }}%</div>
               <div class="text-xs text-yellow-100">{{ leaderboard[0].score }}/{{ leaderboard[0].total_questions }}</div>
             </div>
@@ -549,7 +571,7 @@ const triggerConfetti = () => {
             <div v-if="leaderboard[1]"
                  class="order-2 sm:order-1 bg-gradient-to-br from-gray-300 to-gray-400 rounded-xl p-4 text-center border-2 border-gray-400 shadow-lg">
               <div class="text-3xl mb-2">🥈</div>
-              <div class="font-bold text-gray-800 mb-1 truncate">{{ leaderboard[1].username }}</div>
+              <div class="font-bold text-gray-800 mb-1 truncate">{{ getDisplayName(leaderboard[1], 1) }}</div>
               <div class="text-2xl font-bold text-gray-800 mb-1">{{ leaderboard[1].percentage }}%</div>
               <div class="text-xs text-gray-600">{{ leaderboard[1].score }}/{{ leaderboard[1].total_questions }}</div>
             </div>
@@ -558,7 +580,7 @@ const triggerConfetti = () => {
             <div v-if="leaderboard[2]"
                  class="order-3 bg-gradient-to-br from-orange-400 to-amber-600 rounded-xl p-4 text-center border-2 border-orange-400 shadow-lg">
               <div class="text-3xl mb-2">🥉</div>
-              <div class="font-bold text-white mb-1 truncate">{{ leaderboard[2].username }}</div>
+              <div class="font-bold text-white mb-1 truncate">{{ getDisplayName(leaderboard[2], 2) }}</div>
               <div class="text-2xl font-bold text-white mb-1">{{ leaderboard[2].percentage }}%</div>
               <div class="text-xs text-orange-100">{{ leaderboard[2].score }}/{{ leaderboard[2].total_questions }}</div>
             </div>
@@ -590,8 +612,12 @@ const triggerConfetti = () => {
             {{ startButtonText }}
           </button>
 
-          <p v-if="username" class="text-xs sm:text-sm text-gray-500 mt-3 text-center">
+          <p v-if="username && !challenge.is_anonymous" class="text-xs sm:text-sm text-gray-500 mt-3 text-center">
             Participando como: <strong class="text-blue-600">{{ username }}</strong>
+          </p>
+          <p v-if="challenge.is_anonymous" class="text-xs text-gray-500 mt-3 text-center flex items-center justify-center gap-1">
+            <span>🔒</span>
+            <span>Tu nombre aparecerá de forma anónima</span>
           </p>
         </div>
       </div>

@@ -418,7 +418,8 @@ app.post('/api/challenges/create', async (req, res) => {
       totalQuestions,
       timeTaken = 0,
       showCreatorScore = true,
-      hasLeaderboard = true
+      hasLeaderboard = true,
+      isAnonymous = false
     } = req.body;
 
     if (!quizId || !creatorId || !totalQuestions) {
@@ -439,7 +440,7 @@ app.post('/api/challenges/create', async (req, res) => {
     // ⭐ VERIFICAR SI YA EXISTE UN CHALLENGE ACTIVO PARA ESTE QUIZ
     const { data: existingChallenge, error: existingError } = await supabase
       .from('quiz_challenges')
-      .select('id, share_code, share_slug')
+      .select('id, share_code, share_slug, is_anonymous')
       .eq('quiz_id', quizId)
       .eq('creator_id', creatorId)
       .eq('is_active', true)
@@ -490,7 +491,8 @@ app.post('/api/challenges/create', async (req, res) => {
         share_code: shareCode,
         share_slug: shareSlug,
         show_creator_score: showCreatorScore,
-        has_leaderboard: hasLeaderboard
+        has_leaderboard: hasLeaderboard,
+        is_anonymous: isAnonymous
       })
       .select()
       .single();
@@ -556,6 +558,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
         share_code,
         share_slug,
         created_at,
+        is_anonymous,
         quizzes (
           title,
           total_questions
@@ -606,6 +609,7 @@ app.get('/api/challenges/my-challenges', async (req, res) => {
           share_code: challenge.share_code,
           share_slug: challenge.share_slug,
           is_active: true, // All challenges are active by default
+          is_anonymous: challenge.is_anonymous || false,
           created_at: challenge.created_at,
           total_attempts: totalAttempts,
           best_score: bestScore,
@@ -793,10 +797,10 @@ app.get('/api/challenges/:challengeId/leaderboard', async (req, res) => {
   try {
     const { challengeId } = req.params;
 
-    // Primero obtener el creator_id del challenge
+    // Primero obtener el creator_id y is_anonymous del challenge
     const { data: challenge, error: challengeError } = await supabase
       .from('quiz_challenges')
-      .select('creator_id')
+      .select('creator_id, is_anonymous')
       .eq('id', challengeId)
       .single();
 
@@ -821,7 +825,8 @@ app.get('/api/challenges/:challengeId/leaderboard', async (req, res) => {
     res.json({
       success: true,
       leaderboard: leaderboardWithCreatorFlag,
-      creator_id: challenge.creator_id
+      creator_id: challenge.creator_id,
+      is_anonymous: challenge.is_anonymous || false
     });
   } catch (error) {
     console.error('Error getting leaderboard:', error);

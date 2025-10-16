@@ -18,6 +18,8 @@ const { success, error: showError } = useToast()
 
 const challengeUrl = ref<string | null>(null)
 const generatingChallenge = ref(false)
+const isAnonymous = ref(false)
+const showAnonymousPrompt = ref(false)
 
 const shareText = computed(() => {
   const emoji = props.percentage >= 90 ? '🏆' : props.percentage >= 70 ? '🎯' : '📚'
@@ -41,7 +43,8 @@ const generateChallengeUrl = async (): Promise<string> => {
         creatorUsername: props.creatorUsername,
         creatorScore: props.score,
         totalQuestions: props.totalQuestions,
-        timeTaken: props.timeTaken || 0
+        timeTaken: props.timeTaken || 0,
+        isAnonymous: isAnonymous.value
       })
     })
 
@@ -67,7 +70,28 @@ const generateChallengeUrl = async (): Promise<string> => {
   }
 }
 
+const promptAnonymous = (callback: () => void) => {
+  showAnonymousPrompt.value = true
+  // Store callback for later execution
+  ;(window as any).__shareCallback = callback
+}
+
+const confirmAnonymous = async (anonymous: boolean) => {
+  isAnonymous.value = anonymous
+  showAnonymousPrompt.value = false
+  const callback = (window as any).__shareCallback
+  if (callback) {
+    callback()
+    delete (window as any).__shareCallback
+  }
+}
+
 const shareOnTwitter = async () => {
+  if (!challengeUrl.value && !showAnonymousPrompt.value) {
+    promptAnonymous(shareOnTwitter)
+    return
+  }
+
   const url = await generateChallengeUrl()
   const text = encodeURIComponent(shareText.value)
   const encodedUrl = encodeURIComponent(url)
@@ -79,6 +103,11 @@ const shareOnTwitter = async () => {
 }
 
 const shareOnWhatsApp = async () => {
+  if (!challengeUrl.value && !showAnonymousPrompt.value) {
+    promptAnonymous(shareOnWhatsApp)
+    return
+  }
+
   const url = await generateChallengeUrl()
   const text = encodeURIComponent(`${shareText.value}\n\n${url}`)
   window.open(
@@ -88,6 +117,11 @@ const shareOnWhatsApp = async () => {
 }
 
 const shareOnFacebook = async () => {
+  if (!challengeUrl.value && !showAnonymousPrompt.value) {
+    promptAnonymous(shareOnFacebook)
+    return
+  }
+
   const url = await generateChallengeUrl()
   const encodedUrl = encodeURIComponent(url)
   window.open(
@@ -98,6 +132,11 @@ const shareOnFacebook = async () => {
 }
 
 const shareOnLinkedIn = async () => {
+  if (!challengeUrl.value && !showAnonymousPrompt.value) {
+    promptAnonymous(shareOnLinkedIn)
+    return
+  }
+
   const url = await generateChallengeUrl()
   const encodedUrl = encodeURIComponent(url)
   window.open(
@@ -108,6 +147,11 @@ const shareOnLinkedIn = async () => {
 }
 
 const copyLink = async () => {
+  if (!challengeUrl.value && !showAnonymousPrompt.value) {
+    promptAnonymous(copyLink)
+    return
+  }
+
   try {
     const url = await generateChallengeUrl()
     await navigator.clipboard.writeText(url)
@@ -121,6 +165,41 @@ const copyLink = async () => {
 
 <template>
   <div class="share-results">
+    <!-- Anonymous Mode Prompt Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showAnonymousPrompt"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          @click.self="showAnonymousPrompt = false"
+        >
+          <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>🔒</span>
+              <span>¿Desafío anónimo?</span>
+            </h3>
+            <p class="text-gray-600 mb-6">
+              ¿Quieres que los participantes aparezcan con nombres anónimos en el ranking?
+            </p>
+            <div class="flex gap-3">
+              <button
+                @click="confirmAnonymous(false)"
+                class="btn btn-secondary flex-1"
+              >
+                Mostrar nombres
+              </button>
+              <button
+                @click="confirmAnonymous(true)"
+                class="btn btn-primary flex-1"
+              >
+                Anónimo
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <div class="text-center mb-4">
       <p class="text-sm font-medium text-gray-700 mb-3">Comparte tu resultado</p>
       <div class="flex justify-center gap-3 flex-wrap">
@@ -186,5 +265,15 @@ const copyLink = async () => {
 <style scoped>
 .share-button {
   @apply p-3 rounded-full text-white transition-all transform hover:scale-110 shadow-md hover:shadow-lg;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
