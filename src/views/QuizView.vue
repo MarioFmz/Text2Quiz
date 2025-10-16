@@ -32,6 +32,11 @@ const quizTimeTaken = ref<number>(0)
 const expandedAttemptId = ref<string | null>(null)
 const attemptAnswers = ref<Record<string, any>>({})
 const loadingAttempt = ref<string | null>(null)
+const showStudyMaterial = ref(false)
+
+// Global leaderboard
+const globalLeaderboard = ref<any[]>([])
+const loadingLeaderboard = ref(false)
 
 // Edit visibility modal
 const showEditModal = ref(false)
@@ -64,6 +69,11 @@ onMounted(async () => {
 
     // Cargar categorías para el selector
     categories.value = await getCategories()
+
+    // Cargar leaderboard global si el quiz tiene global_challenge_id
+    if (quiz.value.global_challenge_id) {
+      await loadGlobalLeaderboard()
+    }
   } catch (error) {
     console.error('Error loading quiz:', error)
   } finally {
@@ -125,6 +135,29 @@ const submitQuiz = async () => {
       correctCount,
       questions.value.length
     )
+
+    // Guardar automáticamente en el global challenge si existe
+    if (quiz.value.global_challenge_id) {
+      try {
+        await axios.post(
+          `${API_URL}/api/challenges/${quiz.value.global_challenge_id}/attempt`,
+          {
+            userId: user.value.id,
+            username: user.value.email?.split('@')[0] || 'Usuario',
+            score: correctCount,
+            totalQuestions: questions.value.length,
+            timeTaken: quizTimeTaken.value
+          }
+        )
+        console.log('Score saved to global leaderboard')
+
+        // Recargar leaderboard
+        await loadGlobalLeaderboard()
+      } catch (error) {
+        console.error('Error saving to global challenge:', error)
+        // No mostrar error al usuario - el quiz se completó exitosamente
+      }
+    }
 
     showResults.value = true
   } catch (error) {
@@ -300,6 +333,24 @@ const deleteQuiz = async () => {
     showDeleteConfirm.value = false
   }
 }
+
+// Load global leaderboard
+const loadGlobalLeaderboard = async () => {
+  if (!quiz.value?.global_challenge_id) return
+
+  loadingLeaderboard.value = true
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/challenges/${quiz.value.global_challenge_id}/leaderboard`
+    )
+    globalLeaderboard.value = response.data.leaderboard || []
+  } catch (error) {
+    console.error('Error loading global leaderboard:', error)
+    globalLeaderboard.value = []
+  } finally {
+    loadingLeaderboard.value = false
+  }
+}
 </script>
 
 <template>
@@ -408,6 +459,42 @@ const deleteQuiz = async () => {
 
           <div class="prose max-w-none mb-6 sm:mb-8">
             <p class="text-sm sm:text-base text-gray-700 whitespace-pre-line">{{ quiz.summary || 'Repasa los conceptos principales antes de comenzar el quiz.' }}</p>
+          </div>
+
+          <!-- Study Material Section (if combined_content exists) -->
+          <div v-if="quiz.combined_content" class="mb-6 sm:mb-8">
+            <button
+              @click="showStudyMaterial = !showStudyMaterial"
+              class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg transition-all duration-200 border-2 border-blue-200"
+            >
+              <div class="flex items-center space-x-3">
+                <span class="text-2xl">📖</span>
+                <div class="text-left">
+                  <h3 class="font-bold text-gray-900">Material de Estudio Completo</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Contenido del documento original</p>
+                </div>
+              </div>
+              <svg
+                class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 transition-transform duration-200"
+                :class="{ 'rotate-180': showStudyMaterial }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- Collapsible Content -->
+            <Transition name="expand">
+              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg">
+                <div class="prose prose-sm sm:prose max-w-none">
+                  <div class="text-sm sm:text-base text-gray-800 whitespace-pre-line leading-relaxed">
+                    {{ quiz.combined_content }}
+                  </div>
+                </div>
+              </div>
+            </Transition>
           </div>
 
           <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-6 bg-gray-50 rounded-lg">
@@ -560,6 +647,66 @@ const deleteQuiz = async () => {
                   </div>
                 </div>
               </Transition>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Leaderboard -->
+        <div v-if="quiz.global_challenge_id && globalLeaderboard.length > 0" class="card">
+          <div class="flex items-center space-x-3 mb-4">
+            <span class="text-xl sm:text-2xl">🏆</span>
+            <h2 class="text-base sm:text-lg md:text-xl font-bold">Ranking Global</h2>
+          </div>
+
+          <div v-if="loadingLeaderboard" class="text-center py-4 text-gray-600">
+            Cargando ranking...
+          </div>
+
+          <div v-else class="space-y-2">
+            <div
+              v-for="(entry, index) in globalLeaderboard.slice(0, 10)"
+              :key="entry.id"
+              class="flex items-center justify-between p-3 rounded-lg"
+              :class="entry.user_id === user?.id ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="text-center min-w-[2rem]">
+                  <span class="text-lg font-bold" :class="{
+                    'text-yellow-500': index === 0,
+                    'text-gray-400': index === 1,
+                    'text-orange-600': index === 2,
+                    'text-gray-700': index > 2
+                  }">
+                    {{ index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}` }}
+                  </span>
+                </div>
+                <div>
+                  <div class="font-medium text-gray-900 flex items-center gap-2">
+                    {{ entry.username }}
+                    <span v-if="entry.user_id === user?.id" class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                      Tú
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ Math.round((entry.score / entry.total_questions) * 100) }}% · {{ entry.score }}/{{ entry.total_questions }}
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-semibold" :class="{
+                  'text-green-600': entry.score / entry.total_questions >= 0.9,
+                  'text-blue-600': entry.score / entry.total_questions >= 0.7 && entry.score / entry.total_questions < 0.9,
+                  'text-gray-600': entry.score / entry.total_questions < 0.7
+                }">
+                  {{ entry.score }} pts
+                </div>
+              </div>
+            </div>
+
+            <div v-if="globalLeaderboard.length > 10" class="text-center pt-2">
+              <p class="text-sm text-gray-500">
+                y {{ globalLeaderboard.length - 10 }} participantes más
+              </p>
             </div>
           </div>
         </div>

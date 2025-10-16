@@ -10,32 +10,51 @@ const router = useRouter()
 const { success } = useToast()
 
 const loading = ref(true)
-const challenges = ref<any[]>([])
-const participatedChallenges = ref<any[]>([])
+const myRankings = ref<any[]>([])
 
 onMounted(async () => {
   if (!user.value) {
     router.push('/login')
     return
   }
-  await loadMyChallenges()
+  await loadMyRankings()
 })
 
-const loadMyChallenges = async () => {
+const loadMyRankings = async () => {
   loading.value = true
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
     const response = await fetch(`${apiUrl}/api/challenges/my-challenges?userId=${user.value?.id}`)
 
     if (!response.ok) {
-      throw new Error('Error loading challenges')
+      throw new Error('Error loading rankings')
     }
 
     const data = await response.json()
-    challenges.value = data.challenges || []
-    participatedChallenges.value = data.participated || []
+
+    // Combinar quizzes creados y participados en una sola lista de rankings
+    const created = (data.challenges || []).map((c: any) => ({
+      ...c,
+      userScore: c.creator_percentage || 0,
+      userRank: c.creator_rank || null,
+      userAttempts: c.total_attempts || 0,
+      isCreator: true
+    }))
+
+    const participated = (data.participated || []).map((c: any) => ({
+      ...c,
+      userScore: c.user_score || 0,
+      userRank: c.user_rank || null,
+      userAttempts: c.user_attempts || 0,
+      isCreator: false
+    }))
+
+    // Combinar y ordenar por fecha más reciente
+    myRankings.value = [...created, ...participated].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
   } catch (error) {
-    console.error('Error loading my challenges:', error)
+    console.error('Error loading rankings:', error)
   } finally {
     loading.value = false
   }
@@ -63,13 +82,30 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const activeChallenges = computed(() => {
-  return challenges.value.filter(c => c.is_active)
-})
+const getRankDisplay = (rank: number | null, total: number) => {
+  if (!rank) return '—'
+  if (rank === 1) return '🥇'
+  if (rank === 2) return '🥈'
+  if (rank === 3) return '🥉'
+  return `#${rank}`
+}
 
-const inactiveChallenges = computed(() => {
-  return challenges.value.filter(c => !c.is_active)
+const getScoreColor = (score: number) => {
+  if (score >= 90) return 'text-green-600'
+  if (score >= 70) return 'text-blue-600'
+  if (score >= 50) return 'text-orange-600'
+  return 'text-red-600'
+}
+
+const totalQuizzes = computed(() => myRankings.value.length)
+const averageScore = computed(() => {
+  if (myRankings.value.length === 0) return 0
+  const sum = myRankings.value.reduce((acc, r) => acc + r.userScore, 0)
+  return Math.round(sum / myRankings.value.length)
 })
+const topRankings = computed(() =>
+  myRankings.value.filter(r => r.userRank && r.userRank <= 3).length
+)
 </script>
 
 <template>
@@ -77,9 +113,9 @@ const inactiveChallenges = computed(() => {
     <div class="max-w-7xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
       <!-- Header -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Mis Desafíos Compartidos</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Mis Rankings y Estadísticas</h1>
         <p class="text-gray-600">
-          Gestiona todos los quizzes que has compartido y revisa las estadísticas de participación
+          Revisa tu desempeño y posición en los rankings globales de todos tus quizzes
         </p>
       </div>
 
@@ -89,7 +125,7 @@ const inactiveChallenges = computed(() => {
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="challenges.length === 0 && participatedChallenges.length === 0" class="max-w-3xl mx-auto">
+      <div v-else-if="myRankings.length === 0" class="max-w-3xl mx-auto">
         <div class="text-center py-16 px-4">
           <!-- Large animated icon -->
           <div class="mb-8">
@@ -98,14 +134,14 @@ const inactiveChallenges = computed(() => {
 
           <!-- Engaging heading with gradient -->
           <h2 class="text-3xl sm:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-red-600 to-pink-600">
-            ¡Desafía a tus amigos y compite!
+            ¡Empieza a competir en rankings globales!
           </h2>
 
           <!-- Descriptive and encouraging text -->
           <p class="text-lg text-gray-600 mb-8 leading-relaxed">
-            Aún no has creado ningún desafío ni participado en uno.
-            <span class="font-semibold text-orange-600">Comparte tus quizzes</span> con amigos o únete a desafíos existentes
-            para <span class="font-semibold text-red-600">competir y aprender juntos</span>.
+            Aún no has completado ningún quiz.
+            <span class="font-semibold text-orange-600">Completa tus primeros quizzes</span> para aparecer en los rankings globales
+            y <span class="font-semibold text-red-600">competir con otros usuarios</span>.
           </p>
 
           <!-- Multiple action buttons -->
@@ -116,7 +152,7 @@ const inactiveChallenges = computed(() => {
             >
               <span class="flex items-center justify-center gap-2">
                 <span>📚</span>
-                <span>Ver mis quizzes</span>
+                <span>Empezar con mis quizzes</span>
                 <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
@@ -129,7 +165,7 @@ const inactiveChallenges = computed(() => {
             >
               <span class="flex items-center justify-center gap-2">
                 <span>🌍</span>
-                <span>Explorar desafíos públicos</span>
+                <span>Explorar quizzes públicos</span>
               </span>
             </router-link>
           </div>
@@ -139,193 +175,155 @@ const inactiveChallenges = computed(() => {
             <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-orange-100">
               <div class="flex items-center gap-3 mb-3">
                 <div class="text-3xl">1️⃣</div>
-                <h3 class="font-bold text-gray-900">Completa un quiz</h3>
+                <h3 class="font-bold text-gray-900">Completa quizzes</h3>
               </div>
-              <p class="text-sm text-gray-600">Realiza cualquier quiz de tu biblioteca</p>
+              <p class="text-sm text-gray-600">Tu puntuación se guarda automáticamente</p>
             </div>
 
             <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-red-100">
               <div class="flex items-center gap-3 mb-3">
                 <div class="text-3xl">2️⃣</div>
-                <h3 class="font-bold text-gray-900">Comparte el enlace</h3>
+                <h3 class="font-bold text-gray-900">Compite globalmente</h3>
               </div>
-              <p class="text-sm text-gray-600">Genera un link único para compartir</p>
+              <p class="text-sm text-gray-600">Cada quiz tiene su ranking mundial</p>
             </div>
 
             <div class="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-6 text-left transform hover:scale-105 transition-all duration-300 border border-pink-100">
               <div class="flex items-center gap-3 mb-3">
                 <div class="text-3xl">3️⃣</div>
-                <h3 class="font-bold text-gray-900">Compite y gana</h3>
+                <h3 class="font-bold text-gray-900">Mejora tu posición</h3>
               </div>
-              <p class="text-sm text-gray-600">Sigue el ranking en tiempo real</p>
+              <p class="text-sm text-gray-600">Intenta de nuevo para subir en el ranking</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Challenges List -->
+      <!-- Rankings and Statistics -->
       <div v-else>
-        <!-- Active Challenges -->
-        <div v-if="activeChallenges.length > 0" class="mb-8">
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div class="card bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Total de Quizzes</p>
+                <p class="text-3xl font-bold text-blue-600">{{ totalQuizzes }}</p>
+              </div>
+              <div class="text-4xl">📊</div>
+            </div>
+          </div>
+
+          <div class="card bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Promedio General</p>
+                <p class="text-3xl font-bold text-green-600">{{ averageScore }}%</p>
+              </div>
+              <div class="text-4xl">📈</div>
+            </div>
+          </div>
+
+          <div class="card bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Top 3 Rankings</p>
+                <p class="text-3xl font-bold text-orange-600">{{ topRankings }}</p>
+              </div>
+              <div class="text-4xl">🏆</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rankings List -->
+        <div>
           <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span class="text-2xl mr-2">🏆</span>
-            Desafíos Activos ({{ activeChallenges.length }})
+            <span class="text-2xl mr-2">🎯</span>
+            Mis Rankings ({{ myRankings.length }})
           </h2>
 
-          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div
-              v-for="challenge in activeChallenges"
-              :key="challenge.id"
+              v-for="ranking in myRankings"
+              :key="ranking.id"
               class="card hover:shadow-lg transition-shadow duration-200"
             >
-              <!-- Challenge Header -->
-              <div class="mb-4">
+              <!-- Quiz Header -->
+              <div class="mb-3">
                 <div class="flex items-start justify-between gap-2 mb-2">
-                  <h3 class="font-bold text-lg text-gray-900 flex-1">
-                    {{ challenge.quiz_title }}
+                  <h3 class="font-bold text-base text-gray-900 flex-1 line-clamp-2">
+                    {{ ranking.quiz_title }}
                   </h3>
-                  <span v-if="challenge.is_anonymous" class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap" title="Desafío anónimo">
-                    <span>🔒</span>
+                  <span v-if="ranking.isCreator" class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap" title="Quiz creado por ti">
+                    ✨
                   </span>
                 </div>
-                <div class="flex items-center space-x-2 text-sm text-gray-500">
-                  <span>📅 {{ formatDate(challenge.created_at) }}</span>
+                <div class="text-xs text-gray-500">
+                  📅 {{ formatDate(ranking.created_at) }}
                 </div>
               </div>
 
-              <!-- Stats Grid -->
-              <div class="grid grid-cols-3 gap-3 mb-4">
-                <!-- Participants -->
-                <div class="bg-blue-50 rounded-lg p-3 text-center">
-                  <div class="text-2xl font-bold text-blue-600">
-                    {{ challenge.total_attempts || 0 }}
-                  </div>
-                  <div class="text-xs text-gray-600">Participantes</div>
-                </div>
-
-                <!-- Best Score -->
-                <div class="bg-green-50 rounded-lg p-3 text-center">
-                  <div class="text-2xl font-bold text-green-600">
-                    {{ challenge.best_score || 0 }}%
-                  </div>
-                  <div class="text-xs text-gray-600">Mejor</div>
-                </div>
-
+              <!-- Stats Compact Grid -->
+              <div class="grid grid-cols-3 gap-2 mb-3">
                 <!-- Your Score -->
-                <div class="bg-orange-50 rounded-lg p-3 text-center">
-                  <div class="text-2xl font-bold text-orange-600">
-                    {{ challenge.creator_percentage || 0 }}%
+                <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-2 text-center">
+                  <div class="text-lg font-bold" :class="getScoreColor(ranking.userScore)">
+                    {{ ranking.userScore }}%
                   </div>
                   <div class="text-xs text-gray-600">Tu Score</div>
                 </div>
+
+                <!-- Your Rank -->
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-2 text-center">
+                  <div class="text-lg font-bold text-purple-600">
+                    {{ getRankDisplay(ranking.userRank, ranking.total_attempts || ranking.userAttempts) }}
+                  </div>
+                  <div class="text-xs text-gray-600">Posición</div>
+                </div>
+
+                <!-- Total Participants -->
+                <div class="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-2 text-center">
+                  <div class="text-lg font-bold text-gray-700">
+                    {{ ranking.total_attempts || ranking.userAttempts || 0 }}
+                  </div>
+                  <div class="text-xs text-gray-600">Total</div>
+                </div>
               </div>
 
-              <!-- Your Position -->
-              <div v-if="challenge.creator_rank" class="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-semibold text-gray-700">Tu posición:</span>
-                  <span class="text-lg font-bold text-purple-600">
-                    {{ challenge.creator_rank === 1 ? '🥇' : challenge.creator_rank === 2 ? '🥈' : challenge.creator_rank === 3 ? '🥉' : `#${challenge.creator_rank}` }}
-                    de {{ challenge.total_attempts }}
-                  </span>
-                </div>
+              <!-- Ranking Badge (if Top 3) -->
+              <div v-if="ranking.userRank && ranking.userRank <= 3" class="mb-3 p-2 rounded-lg text-center"
+                :class="{
+                  'bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-300': ranking.userRank === 1,
+                  'bg-gradient-to-r from-gray-100 to-slate-100 border-2 border-gray-300': ranking.userRank === 2,
+                  'bg-gradient-to-r from-orange-100 to-amber-100 border-2 border-orange-300': ranking.userRank === 3
+                }"
+              >
+                <span class="text-sm font-bold"
+                  :class="{
+                    'text-yellow-700': ranking.userRank === 1,
+                    'text-gray-700': ranking.userRank === 2,
+                    'text-orange-700': ranking.userRank === 3
+                  }"
+                >
+                  {{ ranking.userRank === 1 ? '🥇 ¡Primer Lugar!' : ranking.userRank === 2 ? '🥈 Segundo Lugar' : '🥉 Tercer Lugar' }}
+                </span>
               </div>
 
               <!-- Action Buttons -->
               <div class="flex space-x-2">
                 <button
-                  @click="copyToClipboard(getShareUrl(challenge.share_slug))"
-                  class="btn btn-secondary flex-1 text-sm"
+                  @click="copyToClipboard(getShareUrl(ranking.share_slug))"
+                  class="btn btn-secondary flex-1 text-xs py-2"
+                  title="Copiar enlace para compartir"
                 >
-                  📋 Copiar Link
+                  📋
                 </button>
                 <button
-                  @click="router.push(`/challenge/${challenge.share_slug}`)"
-                  class="btn btn-primary flex-1 text-sm"
+                  @click="router.push(`/challenge/${ranking.share_slug}`)"
+                  class="btn btn-primary flex-1 text-xs py-2"
                 >
-                  👁️ Ver
+                  Ver Ranking Completo
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Inactive Challenges -->
-        <div v-if="inactiveChallenges.length > 0">
-          <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
-            <span class="text-2xl mr-2">📦</span>
-            Desafíos Inactivos ({{ inactiveChallenges.length }})
-          </h2>
-
-          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div
-              v-for="challenge in inactiveChallenges"
-              :key="challenge.id"
-              class="card opacity-60"
-            >
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <h3 class="font-bold text-gray-900 flex-1">
-                  {{ challenge.quiz_title }}
-                </h3>
-                <span v-if="challenge.is_anonymous" class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap" title="Desafío anónimo">
-                  <span>🔒</span>
-                </span>
-              </div>
-              <p class="text-sm text-gray-500 mb-3">
-                📅 {{ formatDate(challenge.created_at) }}
-              </p>
-              <div class="text-sm text-gray-600">
-                {{ challenge.total_attempts || 0 }} participantes
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Participated Challenges -->
-        <div v-if="participatedChallenges.length > 0" class="mt-8">
-          <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span class="text-2xl mr-2">🎯</span>
-            Desafíos en los que Participaste ({{ participatedChallenges.length }})
-          </h2>
-
-          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <div
-              v-for="challenge in participatedChallenges"
-              :key="challenge.id"
-              class="card hover:shadow-lg transition-shadow duration-200 border-2 border-blue-100"
-            >
-              <div class="mb-4">
-                <h3 class="font-bold text-lg text-gray-900 mb-2">
-                  {{ challenge.quiz_title }}
-                </h3>
-                <div class="flex items-center space-x-2 text-sm text-gray-500">
-                  <span>📅 {{ formatDate(challenge.created_at) }}</span>
-                </div>
-              </div>
-
-              <!-- User Stats -->
-              <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-blue-50 rounded-lg p-3 text-center">
-                  <div class="text-2xl font-bold text-blue-600">
-                    {{ challenge.user_score }}%
-                  </div>
-                  <div class="text-xs text-gray-600">Tu Mejor Score</div>
-                </div>
-                <div class="bg-purple-50 rounded-lg p-3 text-center">
-                  <div class="text-2xl font-bold text-purple-600">
-                    {{ challenge.user_attempts }}
-                  </div>
-                  <div class="text-xs text-gray-600">Intentos</div>
-                </div>
-              </div>
-
-              <!-- Action Button -->
-              <button
-                @click="router.push(`/challenge/${challenge.share_slug}`)"
-                class="btn btn-primary w-full text-sm"
-              >
-                👁️ Ver Desafío
-              </button>
             </div>
           </div>
         </div>

@@ -166,9 +166,15 @@ app.post('/api/generate-quiz', async (req, res) => {
 
     console.log('Quiz saved to database successfully');
 
+    // Crear global challenge automáticamente
+    const globalChallenge = await ensureGlobalChallenge(savedQuiz.id, document.user_id, savedQuiz.title);
+
     res.json({
       success: true,
-      quiz: savedQuiz
+      quiz: {
+        ...savedQuiz,
+        global_challenge_id: globalChallenge?.id || savedQuiz.global_challenge_id
+      }
     });
   } catch (error) {
     console.error('Error generating quiz:', error);
@@ -293,9 +299,15 @@ app.post('/api/quizzes/create-from-multiple', async (req, res) => {
 
     console.log('Quiz saved successfully with multiple document links');
 
+    // Crear global challenge automáticamente
+    const globalChallenge = await ensureGlobalChallenge(savedQuiz.id, userId, savedQuiz.title);
+
     res.json({
       success: true,
-      quiz: savedQuiz,
+      quiz: {
+        ...savedQuiz,
+        global_challenge_id: globalChallenge?.id || savedQuiz.global_challenge_id
+      },
       documentCount: documentIds.length
     });
   } catch (error) {
@@ -405,6 +417,70 @@ function generateShareSlug(title) {
 
   // Limitar a 50 caracteres (límite de la base de datos)
   return fullSlug.substring(0, 50);
+}
+
+// Función helper para asegurar que un quiz tenga un global challenge
+async function ensureGlobalChallenge(quizId, userId, quizTitle) {
+  try {
+    // Verificar si el quiz ya tiene global_challenge_id
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('global_challenge_id, user_id')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError) throw quizError;
+
+    // Si ya tiene global challenge, retornarlo
+    if (quiz.global_challenge_id) {
+      const { data: existingChallenge } = await supabase
+        .from('quiz_challenges')
+        .select('id, share_code, share_slug')
+        .eq('id', quiz.global_challenge_id)
+        .single();
+
+      if (existingChallenge) {
+        console.log(`Quiz ${quizId} already has global challenge ${existingChallenge.id}`);
+        return existingChallenge;
+      }
+    }
+
+    // Crear nuevo global challenge
+    const shareCode = generateShareCode();
+    const shareSlug = generateShareSlug(quizTitle);
+
+    // For system quizzes without user_id, use special system user ID
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+    const { data: newChallenge, error: createError } = await supabase
+      .from('quiz_challenges')
+      .insert({
+        quiz_id: quizId,
+        creator_id: quiz.user_id || userId || SYSTEM_USER_ID,
+        share_code: shareCode,
+        share_slug: shareSlug,
+        show_creator_score: false,
+        has_leaderboard: true,
+        is_anonymous: false
+      })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+
+    // Actualizar quiz con global_challenge_id
+    await supabase
+      .from('quizzes')
+      .update({ global_challenge_id: newChallenge.id })
+      .eq('id', quizId);
+
+    console.log(`Created global challenge ${newChallenge.id} for quiz ${quizId}`);
+    return newChallenge;
+  } catch (error) {
+    console.error(`Error ensuring global challenge for quiz ${quizId}:`, error);
+    // No lanzar error, solo log - el quiz se puede usar sin challenge
+    return null;
+  }
 }
 
 // Crear un challenge compartido

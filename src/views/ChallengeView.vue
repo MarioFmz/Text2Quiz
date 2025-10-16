@@ -31,6 +31,7 @@ const showLeaderboard = ref(false)
 const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 const isCreator = ref(false)
+const showStudyMaterial = ref(false)
 
 // Auto-save progress variables
 const sessionId = ref<string>('')
@@ -713,13 +714,49 @@ const triggerConfetti = () => {
         </div>
 
         <!-- Resumen y Documentos (si hay) -->
-        <div v-if="quiz.summary || documents.length > 0" class="card">
+        <div v-if="quiz.summary || quiz.combined_content || documents.length > 0" class="card">
           <div v-if="quiz.summary" class="mb-6">
             <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <span class="text-lg">📋</span>
               <span>Sobre este desafío</span>
             </h3>
             <p class="text-sm sm:text-base text-gray-600 leading-relaxed">{{ quiz.summary }}</p>
+          </div>
+
+          <!-- Study Material Section (if combined_content exists) -->
+          <div v-if="quiz.combined_content" class="mb-6">
+            <button
+              @click="showStudyMaterial = !showStudyMaterial"
+              class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg transition-all duration-200 border-2 border-blue-200"
+            >
+              <div class="flex items-center space-x-3">
+                <span class="text-2xl">📖</span>
+                <div class="text-left">
+                  <h3 class="font-bold text-gray-900">Material de Estudio Completo</h3>
+                  <p class="text-xs sm:text-sm text-gray-600">Contenido del documento original</p>
+                </div>
+              </div>
+              <svg
+                class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 transition-transform duration-200"
+                :class="{ 'rotate-180': showStudyMaterial }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- Collapsible Content -->
+            <Transition name="expand">
+              <div v-if="showStudyMaterial" class="mt-4 p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg">
+                <div class="prose prose-sm sm:prose max-w-none">
+                  <div class="text-sm sm:text-base text-gray-800 whitespace-pre-line leading-relaxed">
+                    {{ quiz.combined_content }}
+                  </div>
+                </div>
+              </div>
+            </Transition>
           </div>
 
           <!-- Document Links -->
@@ -968,3 +1005,28 @@ const triggerConfetti = () => {
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
