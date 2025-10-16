@@ -493,6 +493,12 @@ const triggerConfetti = () => {
       // Crear elemento para el confeti
       const confettiElement = document.createElement('div')
       confettiElement.id = `confetti-trigger-${i}-${Date.now()}`
+      confettiElement.style.position = 'fixed'
+      confettiElement.style.left = '50%'
+      confettiElement.style.top = '50%'
+      confettiElement.style.width = '10px'
+      confettiElement.style.height = '10px'
+      confettiElement.style.pointerEvents = 'none'
       document.body.appendChild(confettiElement)
 
       // Configurar y lanzar confeti
@@ -502,6 +508,16 @@ const triggerConfetti = () => {
       confetti.setPower(25)
       confetti.setFade(false)
       confetti.destroyTarget(true)
+
+      // Simular click en el centro de la pantalla para disparar el confeti
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2
+      })
+      confettiElement.dispatchEvent(clickEvent)
 
       // Limpiar después de 5 segundos
       setTimeout(() => {

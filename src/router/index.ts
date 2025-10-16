@@ -97,18 +97,8 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
 
-  // Si la ruta no requiere autenticación, permitir acceso inmediato
-  if (!to.meta.requiresAuth) {
-    // Redirigir usuarios autenticados de login/register al dashboard
-    if ((to.name === 'login' || to.name === 'register') && authStore.user) {
-      next('/dashboard')
-    } else {
-      next()
-    }
-    return
-  }
-
-  // Solo esperar autenticación para rutas protegidas
+  // SIEMPRE esperar a que se cargue el estado de autenticación
+  // Esto evita el "parpadeo" donde el usuario ve la página como no autenticado
   if (authStore.loading) {
     await new Promise<void>((resolve) => {
       const unwatch = authStore.$subscribe(() => {
@@ -118,6 +108,18 @@ router.beforeEach(async (to, _from, next) => {
         }
       })
     })
+  }
+
+  // Redirigir usuarios autenticados de login/register al dashboard
+  if ((to.name === 'login' || to.name === 'register') && authStore.user) {
+    next('/dashboard')
+    return
+  }
+
+  // Redirigir usuarios autenticados de la home al dashboard
+  if (to.name === 'home' && authStore.user) {
+    next('/dashboard')
+    return
   }
 
   // Verificar autenticación para rutas protegidas

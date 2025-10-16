@@ -9,6 +9,8 @@ import { quizzesService } from '@/services/quizzesService'
 import { updateQuizVisibility, getCategories } from '@/services/publicQuizzesService'
 import type { Question, QuizCategory } from '@/types'
 import axios from 'axios'
+// @ts-ignore
+import Confetti from '@/utils/confetti.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -160,6 +162,14 @@ const submitQuiz = async () => {
     }
 
     showResults.value = true
+
+    // Disparar confetti si es 100% de aciertos
+    const percentage = Math.round((correctCount / questions.value.length) * 100)
+    if (percentage === 100) {
+      setTimeout(() => {
+        triggerConfetti()
+      }, 300)
+    }
   } catch (error) {
     console.error('Error submitting quiz:', error)
   } finally {
@@ -349,6 +359,50 @@ const loadGlobalLeaderboard = async () => {
     globalLeaderboard.value = []
   } finally {
     loadingLeaderboard.value = false
+  }
+}
+
+// Trigger confetti celebration
+const triggerConfetti = () => {
+  // Crear 3 explosiones de confeti
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      // Crear elemento para el confeti
+      const confettiElement = document.createElement('div')
+      confettiElement.id = `confetti-trigger-${i}-${Date.now()}`
+      confettiElement.style.position = 'fixed'
+      confettiElement.style.left = '50%'
+      confettiElement.style.top = '50%'
+      confettiElement.style.width = '10px'
+      confettiElement.style.height = '10px'
+      confettiElement.style.pointerEvents = 'none'
+      document.body.appendChild(confettiElement)
+
+      // Configurar y lanzar confeti
+      const confetti = new Confetti(confettiElement.id)
+      confetti.setCount(75)
+      confetti.setSize(1)
+      confetti.setPower(25)
+      confetti.setFade(false)
+      confetti.destroyTarget(true)
+
+      // Simular click en el centro de la pantalla para disparar el confeti
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2
+      })
+      confettiElement.dispatchEvent(clickEvent)
+
+      // Limpiar después de 5 segundos
+      setTimeout(() => {
+        if (confettiElement.parentNode) {
+          confettiElement.remove()
+        }
+      }, 5000)
+    }, i * 400) // 400ms entre cada explosión
   }
 }
 </script>
