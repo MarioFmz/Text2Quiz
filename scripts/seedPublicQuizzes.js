@@ -22,947 +22,452 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const quizzes = [
   {
-    title: "JavaScript Moderno: ES6+ Features",
+    title: "Marketing Digital y Redes Sociales",
     difficulty: "medium",
-    category_name: "Programación",
-    tags: ["javascript", "es6", "frontend", "desarrollo web"],
+    category_name: "Marketing",
+    tags: ["marketing", "redes sociales", "publicidad", "negocios"],
     source: "Comunidad Text2Quiz",
-    summary: "Domina las características modernas de JavaScript ES6+: arrow functions, destructuring, spread operator, async/await y métodos de arrays. Perfecto para desarrolladores que quieren actualizar sus conocimientos de JavaScript.",
+    summary: "Aprende estrategias de marketing digital: SEO, SEM, redes sociales, métricas y engagement. Esencial para quienes quieren crecer su negocio online o trabajar en marketing.",
     questions: [
       {
-        question_text: "¿Cuál es la diferencia principal entre 'let' y 'const' en JavaScript?",
+        question_text: "¿Qué significa SEO?",
         question_type: "multiple_choice",
-        correct_answer: "'const' no permite reasignación, 'let' sí",
-        options: ["'const' no permite reasignación, 'let' sí", "No hay diferencia", "'let' es más rápido", "'const' solo funciona con números"],
-        explanation: "'const' declara una constante que no puede ser reasignada, mientras que 'let' permite reasignar el valor de la variable."
+        correct_answer: "Search Engine Optimization",
+        options: ["Social Engine Optimization", "Search Engine Optimization", "Search Engine Operation", "Social Engagement Online"],
+        explanation: "SEO es la optimización para motores de búsqueda, mejorando la visibilidad en resultados orgánicos."
       },
       {
-        question_text: "¿Qué retorna una función arrow sin llaves explícitas?",
+        question_text: "¿Qué métrica mide el porcentaje de personas que hacen clic en un enlace?",
         question_type: "multiple_choice",
-        correct_answer: "El valor de la expresión implícitamente",
-        options: ["undefined", "null", "El valor de la expresión implícitamente", "Un objeto vacío"],
-        explanation: "Las arrow functions sin llaves retornan implícitamente el resultado de la expresión."
+        correct_answer: "CTR (Click-Through Rate)",
+        options: ["CPC", "CTR (Click-Through Rate)", "ROI", "CPM"],
+        explanation: "CTR mide el porcentaje de clics sobre impresiones totales de un anuncio o enlace."
       },
       {
-        question_text: "¿Qué hace el operador spread (...) con arrays?",
+        question_text: "¿Qué red social es mejor para marketing B2B profesional?",
         question_type: "multiple_choice",
-        correct_answer: "Expande los elementos del array",
-        options: ["Duplica el array", "Expande los elementos del array", "Elimina elementos", "Ordena el array"],
-        explanation: "El operador spread expande los elementos de un array, permitiendo copiarlos o combinarlos fácilmente."
+        correct_answer: "LinkedIn",
+        options: ["Instagram", "TikTok", "LinkedIn", "Snapchat"],
+        explanation: "LinkedIn es la plataforma ideal para marketing B2B y networking profesional."
       },
       {
-        question_text: "¿Para qué se usa async/await?",
+        question_text: "¿Qué es el engagement rate?",
         question_type: "multiple_choice",
-        correct_answer: "Manejar código asíncrono de forma síncrona",
-        options: ["Hacer el código más lento", "Manejar código asíncrono de forma síncrona", "Crear loops infinitos", "Declarar constantes"],
-        explanation: "async/await permite escribir código asíncrono que se lee como código síncrono, facilitando su comprensión."
+        correct_answer: "Medida de interacción de usuarios con el contenido",
+        options: ["Número de seguidores", "Medida de interacción de usuarios con el contenido", "Costo por clic", "Tiempo en página"],
+        explanation: "El engagement rate mide likes, comentarios, shares y otras interacciones dividido por el alcance."
       },
       {
-        question_text: "¿Qué hace el método .map() en arrays?",
+        question_text: "¿Qué significa SEM?",
         question_type: "multiple_choice",
-        correct_answer: "Transforma cada elemento y retorna un nuevo array",
-        options: ["Elimina elementos", "Transforma cada elemento y retorna un nuevo array", "Ordena el array", "Busca un elemento"],
-        explanation: ".map() crea un nuevo array con los resultados de aplicar una función a cada elemento del array original."
+        correct_answer: "Search Engine Marketing",
+        options: ["Social Engine Marketing", "Search Engine Marketing", "Sales Email Marketing", "Social Engagement Metrics"],
+        explanation: "SEM es marketing en motores de búsqueda, principalmente a través de publicidad pagada como Google Ads."
       }
     ]
   },
   {
-    title: "Python para Data Science",
-    difficulty: "hard",
-    category_name: "Programación",
-    tags: ["python", "data science", "pandas", "numpy"],
-    source: "Comunidad Text2Quiz",
-    summary: "Aprende los fundamentos de Python para análisis de datos: Pandas para manipulación de datos, NumPy para cálculos numéricos y Matplotlib para visualización. Ideal para aspirantes a data scientists.",
-    questions: [
-      {
-        question_text: "¿Qué librería de Python se usa principalmente para manipulación de datos tabulares?",
-        question_type: "multiple_choice",
-        correct_answer: "Pandas",
-        options: ["NumPy", "Pandas", "Matplotlib", "TensorFlow"],
-        explanation: "Pandas es la librería principal para trabajar con datos tabulares (DataFrames) en Python."
-      },
-      {
-        question_text: "En NumPy, ¿qué es un ndarray?",
-        question_type: "multiple_choice",
-        correct_answer: "Un array multidimensional",
-        options: ["Una función", "Un array multidimensional", "Un tipo de gráfico", "Un modelo de ML"],
-        explanation: "ndarray (N-dimensional array) es la estructura de datos fundamental de NumPy para arrays multidimensionales."
-      },
-      {
-        question_text: "¿Qué hace el método .groupby() en Pandas?",
-        question_type: "multiple_choice",
-        correct_answer: "Agrupa datos según una o más columnas",
-        options: ["Ordena datos", "Agrupa datos según una o más columnas", "Elimina duplicados", "Crea gráficos"],
-        explanation: ".groupby() permite agrupar datos por valores de una o más columnas para realizar operaciones agregadas."
-      },
-      {
-        question_text: "¿Cuál es la ventaja principal de usar NumPy sobre listas Python?",
-        question_type: "multiple_choice",
-        correct_answer: "Mejor rendimiento en operaciones numéricas",
-        options: ["Sintaxis más simple", "Mejor rendimiento en operaciones numéricas", "Menos memoria", "Más fácil de aprender"],
-        explanation: "NumPy está optimizado en C, proporcionando operaciones vectorizadas muy rápidas sobre arrays numéricos."
-      },
-      {
-        question_text: "¿Qué librería se usa para visualización de datos en Python?",
-        question_type: "multiple_choice",
-        correct_answer: "Matplotlib",
-        options: ["Django", "Matplotlib", "Flask", "Requests"],
-        explanation: "Matplotlib es la librería más popular para crear visualizaciones y gráficos en Python."
-      }
-    ]
-  },
-  {
-    title: "Probabilidad y Estadística Básica",
+    title: "Filosofía: Grandes Pensadores",
     difficulty: "medium",
-    category_name: "Matemáticas",
-    tags: ["estadística", "probabilidad", "matemáticas"],
+    category_name: "Filosofía",
+    tags: ["filosofía", "pensamiento", "cultura", "historia"],
     source: "Comunidad Text2Quiz",
-    summary: "Conceptos fundamentales de probabilidad y estadística: media, mediana, desviación estándar, frecuencias y cálculo de probabilidades. Esencial para análisis de datos y toma de decisiones.",
+    summary: "Explora las ideas de grandes filósofos: desde Sócrates y Platón hasta Nietzsche y Kant. Descubre las preguntas fundamentales sobre existencia, conocimiento y moral.",
     questions: [
       {
-        question_text: "Si lanzas un dado justo, ¿cuál es la probabilidad de obtener un 4?",
+        question_text: "¿Quién dijo 'Pienso, luego existo'?",
         question_type: "multiple_choice",
-        correct_answer: "1/6",
-        options: ["1/4", "1/6", "1/2", "1/3"],
-        explanation: "Un dado tiene 6 caras y cada una tiene igual probabilidad, por lo tanto P(4) = 1/6."
+        correct_answer: "René Descartes",
+        options: ["Platón", "René Descartes", "Aristóteles", "Kant"],
+        explanation: "Descartes formuló esta frase ('Cogito, ergo sum') como fundamento de su filosofía."
       },
       {
-        question_text: "¿Qué es la media aritmética?",
+        question_text: "¿Qué filósofo griego fue maestro de Aristóteles?",
         question_type: "multiple_choice",
-        correct_answer: "La suma de valores dividida por la cantidad",
-        options: ["El valor más frecuente", "La suma de valores dividida por la cantidad", "El valor central", "La diferencia entre máximo y mínimo"],
-        explanation: "La media es el promedio: suma de todos los valores dividida por la cantidad de valores."
+        correct_answer: "Platón",
+        options: ["Sócrates", "Platón", "Pitágoras", "Tales"],
+        explanation: "Platón fue maestro de Aristóteles y fundó la Academia de Atenas."
       },
       {
-        question_text: "¿Qué mide la desviación estándar?",
+        question_text: "¿Quién escribió 'Así habló Zaratustra'?",
         question_type: "multiple_choice",
-        correct_answer: "La dispersión de los datos respecto a la media",
-        options: ["El valor promedio", "La dispersión de los datos respecto a la media", "El valor máximo", "La cantidad de datos"],
-        explanation: "La desviación estándar mide cuánto se alejan los datos de su valor promedio."
+        correct_answer: "Friedrich Nietzsche",
+        options: ["Karl Marx", "Friedrich Nietzsche", "Søren Kierkegaard", "Arthur Schopenhauer"],
+        explanation: "Nietzsche escribió esta obra en 1883-1885, introduciendo conceptos como el superhombre."
       },
       {
-        question_text: "En una muestra de 100 personas, 30 prefieren café. ¿Cuál es la frecuencia relativa?",
+        question_text: "¿Qué es el 'imperativo categórico' de Kant?",
         question_type: "multiple_choice",
-        correct_answer: "0.30",
-        options: ["30", "0.30", "70", "0.70"],
-        explanation: "La frecuencia relativa es 30/100 = 0.30 o 30%."
+        correct_answer: "Un principio moral universal",
+        options: ["Una teoría política", "Un principio moral universal", "Una crítica al conocimiento", "Una teoría estética"],
+        explanation: "El imperativo categórico es el principio ético fundamental de Kant: actuar según máximas universalizables."
       },
       {
-        question_text: "¿Qué es la mediana?",
+        question_text: "¿Qué método usaba Sócrates para enseñar?",
         question_type: "multiple_choice",
-        correct_answer: "El valor que divide los datos en dos mitades iguales",
-        options: ["El promedio", "El valor más frecuente", "El valor que divide los datos en dos mitades iguales", "La suma de todos los valores"],
-        explanation: "La mediana es el valor central cuando los datos están ordenados, dividiendo el conjunto en dos partes iguales."
+        correct_answer: "La mayéutica (diálogo mediante preguntas)",
+        options: ["Conferencias magistrales", "La mayéutica (diálogo mediante preguntas)", "Experimentos", "Meditación"],
+        explanation: "Sócrates usaba preguntas para que sus interlocutores llegaran por sí mismos a conclusiones."
       }
     ]
   },
   {
-    title: "Historia Universal: Siglo XX",
-    difficulty: "medium",
-    category_name: "Historia",
-    tags: ["historia", "siglo XX", "cultura general"],
-    source: "Comunidad Text2Quiz",
-    summary: "Recorre los eventos más importantes del siglo XX: las Guerras Mundiales, la Guerra Fría, la carrera espacial y la caída del Muro de Berlín. Descubre la historia que moldeó nuestro mundo actual.",
-    questions: [
-      {
-        question_text: "¿En qué año terminó la Segunda Guerra Mundial?",
-        question_type: "multiple_choice",
-        correct_answer: "1945",
-        options: ["1943", "1944", "1945", "1946"],
-        explanation: "La Segunda Guerra Mundial terminó en 1945 con la rendición de Japón en septiembre."
-      },
-      {
-        question_text: "¿Quién fue el primer hombre en pisar la Luna?",
-        question_type: "multiple_choice",
-        correct_answer: "Neil Armstrong",
-        options: ["Buzz Aldrin", "Neil Armstrong", "Yuri Gagarin", "John Glenn"],
-        explanation: "Neil Armstrong pisó la Luna el 20 de julio de 1969 durante la misión Apolo 11."
-      },
-      {
-        question_text: "¿En qué año cayó el Muro de Berlín?",
-        question_type: "multiple_choice",
-        correct_answer: "1989",
-        options: ["1987", "1988", "1989", "1990"],
-        explanation: "El Muro de Berlín cayó el 9 de noviembre de 1989, marcando el fin de la Guerra Fría."
-      },
-      {
-        question_text: "¿Qué evento marcó el inicio de la Primera Guerra Mundial?",
-        question_type: "multiple_choice",
-        correct_answer: "El asesinato del Archiduque Francisco Fernando",
-        options: ["La invasión de Polonia", "El asesinato del Archiduque Francisco Fernando", "La Revolución Rusa", "El hundimiento del Titanic"],
-        explanation: "El asesinato del Archiduque Francisco Fernando en Sarajevo en 1914 desencadenó la Primera Guerra Mundial."
-      },
-      {
-        question_text: "¿Quién fue el líder de la Unión Soviética durante la mayor parte de la Guerra Fría?",
-        question_type: "multiple_choice",
-        correct_answer: "Joseph Stalin",
-        options: ["Vladimir Lenin", "Joseph Stalin", "Nikita Kruschev", "Mikhail Gorbachev"],
-        explanation: "Joseph Stalin lideró la URSS desde 1924 hasta 1953, durante los años iniciales y cruciales de la Guerra Fría."
-      }
-    ]
-  },
-  {
-    title: "Geografía Mundial",
+    title: "Psicología Básica",
     difficulty: "easy",
-    category_name: "Geografía",
-    tags: ["geografía", "países", "capitales", "cultura general"],
+    category_name: "Psicología",
+    tags: ["psicología", "mente", "comportamiento", "ciencia"],
     source: "Comunidad Text2Quiz",
-    summary: "Viaja por el mundo aprendiendo sobre capitales, océanos, continentes, ríos y países. Un quiz perfecto para mejorar tu conocimiento geográfico global de forma divertida.",
+    summary: "Comprende los fundamentos de la psicología: emociones, memoria, aprendizaje, y grandes teorías. Descubre cómo funciona la mente humana y el comportamiento.",
     questions: [
       {
-        question_text: "¿Cuál es la capital de Australia?",
+        question_text: "¿Quién es considerado el padre del psicoanálisis?",
         question_type: "multiple_choice",
-        correct_answer: "Canberra",
-        options: ["Sydney", "Melbourne", "Canberra", "Brisbane"],
-        explanation: "Aunque Sydney es más conocida, la capital de Australia es Canberra."
+        correct_answer: "Sigmund Freud",
+        options: ["Carl Jung", "Sigmund Freud", "B.F. Skinner", "Ivan Pavlov"],
+        explanation: "Freud fundó el psicoanálisis y desarrolló teorías sobre el inconsciente."
       },
       {
-        question_text: "¿Qué océano es el más grande del mundo?",
+        question_text: "¿Qué es la memoria a corto plazo?",
         question_type: "multiple_choice",
-        correct_answer: "Océano Pacífico",
-        options: ["Océano Atlántico", "Océano Pacífico", "Océano Índico", "Océano Ártico"],
-        explanation: "El Océano Pacífico es el más grande, cubriendo más del 30% de la superficie terrestre."
+        correct_answer: "Almacenamiento temporal de información (segundos a minutos)",
+        options: ["Recuerdos de la infancia", "Almacenamiento temporal de información (segundos a minutos)", "Memoria permanente", "Recuerdos emocionales"],
+        explanation: "La memoria a corto plazo retiene información brevemente, con capacidad limitada (7±2 elementos)."
       },
       {
-        question_text: "¿En qué continente está Egipto?",
+        question_text: "¿Qué experimento es famoso por el condicionamiento clásico?",
         question_type: "multiple_choice",
-        correct_answer: "África",
-        options: ["Asia", "África", "Europa", "Medio Oriente"],
-        explanation: "Egipto está ubicado en el noreste de África, aunque parte del Sinaí está en Asia."
+        correct_answer: "Los perros de Pavlov",
+        options: ["La caja de Skinner", "Los perros de Pavlov", "El experimento de Stanford", "El muñeco Bobo"],
+        explanation: "Pavlov condicionó a perros a salivar ante el sonido de una campana."
       },
       {
-        question_text: "¿Cuál es el río más largo del mundo?",
+        question_text: "¿Qué son las emociones básicas según Ekman?",
         question_type: "multiple_choice",
-        correct_answer: "Río Nilo",
-        options: ["Río Amazonas", "Río Nilo", "Río Yangtsé", "Río Misisipi"],
-        explanation: "El Nilo, con aproximadamente 6,650 km, es considerado el río más largo del mundo."
+        correct_answer: "Alegría, tristeza, miedo, ira, sorpresa y asco",
+        options: ["Solo felicidad y tristeza", "Alegría, tristeza, miedo, ira, sorpresa y asco", "Amor y odio", "Todas las anteriores"],
+        explanation: "Ekman identificó 6 emociones universales reconocibles en todas las culturas."
       },
       {
-        question_text: "¿Qué país tiene más población en el mundo?",
+        question_text: "¿Qué es la cognición?",
         question_type: "multiple_choice",
-        correct_answer: "India",
-        options: ["China", "India", "Estados Unidos", "Indonesia"],
-        explanation: "India superó a China en 2023 como el país más poblado del mundo."
+        correct_answer: "Los procesos mentales del conocimiento",
+        options: ["Las emociones", "Los procesos mentales del conocimiento", "Los instintos", "La personalidad"],
+        explanation: "La cognición incluye procesos como pensamiento, memoria, atención y percepción."
       }
     ]
   },
   {
-    title: "Inglés: Verbos Irregulares",
-    difficulty: "medium",
-    category_name: "Idiomas",
-    tags: ["inglés", "gramática", "verbos", "idiomas"],
-    source: "Comunidad Text2Quiz",
-    summary: "Practica los verbos irregulares más comunes del inglés: pasado simple y participio pasado de go, eat, write, break y begin. Mejora tu gramática inglesa con este quiz esencial.",
-    questions: [
-      {
-        question_text: "¿Cuál es el pasado simple de 'go'?",
-        question_type: "multiple_choice",
-        correct_answer: "went",
-        options: ["goed", "went", "gone", "going"],
-        explanation: "'Went' es el pasado simple de 'go'. 'Gone' es el participio pasado."
-      },
-      {
-        question_text: "¿Cuál es el participio pasado de 'eat'?",
-        question_type: "multiple_choice",
-        correct_answer: "eaten",
-        options: ["ate", "eated", "eaten", "eating"],
-        explanation: "'Eaten' es el participio pasado de 'eat'. 'Ate' es el pasado simple."
-      },
-      {
-        question_text: "¿Cuál es el pasado de 'write'?",
-        question_type: "multiple_choice",
-        correct_answer: "wrote",
-        options: ["writed", "wrote", "written", "writing"],
-        explanation: "'Wrote' es el pasado simple de 'write'. 'Written' es el participio pasado."
-      },
-      {
-        question_text: "¿Cuál es el participio de 'break'?",
-        question_type: "multiple_choice",
-        correct_answer: "broken",
-        options: ["breaked", "broke", "broken", "breaking"],
-        explanation: "'Broken' es el participio pasado de 'break'. 'Broke' es el pasado simple."
-      },
-      {
-        question_text: "¿Cuál es el pasado de 'begin'?",
-        question_type: "multiple_choice",
-        correct_answer: "began",
-        options: ["beginned", "begun", "began", "beginning"],
-        explanation: "'Began' es el pasado simple de 'begin'. 'Begun' es el participio pasado."
-      }
-    ]
-  },
-  {
-    title: "Biología: Célula y Genética",
-    difficulty: "medium",
-    category_name: "Ciencias",
-    tags: ["biología", "células", "genética", "ciencia"],
-    source: "Comunidad Text2Quiz",
-    summary: "Explora la biología celular y genética: estructura y función de orgánulos, cromosomas, ADN, fotosíntesis y diferencias entre células eucariotas y procariotas. Ciencia fundamental de la vida.",
-    questions: [
-      {
-        question_text: "¿Qué orgánulo celular produce energía?",
-        question_type: "multiple_choice",
-        correct_answer: "Mitocondria",
-        options: ["Núcleo", "Mitocondria", "Ribosoma", "Lisosoma"],
-        explanation: "La mitocondria es conocida como la 'central energética' de la célula, produciendo ATP."
-      },
-      {
-        question_text: "¿Cuántos cromosomas tiene una célula humana normal?",
-        question_type: "multiple_choice",
-        correct_answer: "46",
-        options: ["23", "46", "48", "92"],
-        explanation: "Las células humanas tienen 46 cromosomas: 23 pares, uno de cada progenitor."
-      },
-      {
-        question_text: "¿Qué molécula contiene la información genética?",
-        question_type: "multiple_choice",
-        correct_answer: "ADN",
-        options: ["ARN", "ADN", "Proteínas", "Lípidos"],
-        explanation: "El ADN (ácido desoxirribonucleico) almacena la información genética de los organismos."
-      },
-      {
-        question_text: "¿Qué proceso permite a las plantas producir su alimento?",
-        question_type: "multiple_choice",
-        correct_answer: "Fotosíntesis",
-        options: ["Respiración", "Fotosíntesis", "Fermentación", "Digestión"],
-        explanation: "La fotosíntesis permite a las plantas convertir luz solar, CO2 y agua en glucosa y oxígeno."
-      },
-      {
-        question_text: "¿Qué tipo de célula NO tiene núcleo definido?",
-        question_type: "multiple_choice",
-        correct_answer: "Procariota",
-        options: ["Eucariota", "Procariota", "Animal", "Vegetal"],
-        explanation: "Las células procariotas (bacterias) no tienen núcleo definido, su ADN está en el citoplasma."
-      }
-    ]
-  },
-  {
-    title: "Literatura Universal Clásica",
-    difficulty: "medium",
-    category_name: "Literatura",
-    tags: ["literatura", "libros", "autores", "cultura"],
-    source: "Comunidad Text2Quiz",
-    summary: "Descubre obras maestras de la literatura universal: desde Cervantes y Shakespeare hasta García Márquez y Orwell. Conoce a los grandes autores que han marcado la historia literaria.",
-    questions: [
-      {
-        question_text: "¿Quién escribió 'Cien años de soledad'?",
-        question_type: "multiple_choice",
-        correct_answer: "Gabriel García Márquez",
-        options: ["Mario Vargas Llosa", "Gabriel García Márquez", "Jorge Luis Borges", "Pablo Neruda"],
-        explanation: "Gabriel García Márquez escribió esta obra maestra del realismo mágico en 1967."
-      },
-      {
-        question_text: "¿En qué país nació Miguel de Cervantes?",
-        question_type: "multiple_choice",
-        correct_answer: "España",
-        options: ["México", "España", "Argentina", "Colombia"],
-        explanation: "Miguel de Cervantes, autor de Don Quijote, nació en Alcalá de Henares, España, en 1547."
-      },
-      {
-        question_text: "¿Quién escribió 'Romeo y Julieta'?",
-        question_type: "multiple_choice",
-        correct_answer: "William Shakespeare",
-        options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Oscar Wilde"],
-        explanation: "William Shakespeare escribió esta famosa tragedia romántica alrededor de 1595."
-      },
-      {
-        question_text: "¿Qué obra comienza con 'En un lugar de la Mancha'?",
-        question_type: "multiple_choice",
-        correct_answer: "Don Quijote de la Mancha",
-        options: ["La Celestina", "Don Quijote de la Mancha", "El Lazarillo de Tormes", "La vida es sueño"],
-        explanation: "Don Quijote de la Mancha, de Cervantes, comienza con esta famosa frase."
-      },
-      {
-        question_text: "¿Quién escribió '1984'?",
-        question_type: "multiple_choice",
-        correct_answer: "George Orwell",
-        options: ["Aldous Huxley", "George Orwell", "Ray Bradbury", "H.G. Wells"],
-        explanation: "George Orwell escribió esta distopía sobre totalitarismo en 1949."
-      }
-    ]
-  },
-  {
-    title: "Química Básica",
-    difficulty: "easy",
-    category_name: "Ciencias",
-    tags: ["química", "elementos", "ciencia", "tabla periódica"],
-    source: "Comunidad Text2Quiz",
-    summary: "Aprende los conceptos básicos de química: elementos, símbolos químicos, fórmulas simples, composición de la atmósfera y pH. Perfecto para iniciarse en el mundo de la química.",
-    questions: [
-      {
-        question_text: "¿Cuál es el símbolo químico del oro?",
-        question_type: "multiple_choice",
-        correct_answer: "Au",
-        options: ["Go", "Au", "Or", "Gd"],
-        explanation: "Au viene del latín 'aurum', que significa oro."
-      },
-      {
-        question_text: "¿Qué gas necesitamos para respirar?",
-        question_type: "multiple_choice",
-        correct_answer: "Oxígeno",
-        options: ["Nitrógeno", "Oxígeno", "Dióxido de carbono", "Hidrógeno"],
-        explanation: "Necesitamos oxígeno (O2) para la respiración celular."
-      },
-      {
-        question_text: "¿Cuál es la fórmula química del agua?",
-        question_type: "multiple_choice",
-        correct_answer: "H2O",
-        options: ["H2O", "CO2", "O2", "H2O2"],
-        explanation: "El agua está formada por dos átomos de hidrógeno y uno de oxígeno: H2O."
-      },
-      {
-        question_text: "¿Qué elemento es el más abundante en la atmósfera?",
-        question_type: "multiple_choice",
-        correct_answer: "Nitrógeno",
-        options: ["Oxígeno", "Nitrógeno", "Dióxido de carbono", "Argón"],
-        explanation: "El nitrógeno constituye aproximadamente el 78% de la atmósfera terrestre."
-      },
-      {
-        question_text: "¿Cuál es el pH del agua pura?",
-        question_type: "multiple_choice",
-        correct_answer: "7",
-        options: ["0", "7", "14", "10"],
-        explanation: "El agua pura tiene pH 7, siendo neutro (ni ácido ni básico)."
-      }
-    ]
-  },
-  {
-    title: "Física: Mecánica Básica",
-    difficulty: "medium",
-    category_name: "Ciencias",
-    tags: ["física", "mecánica", "ciencia", "leyes"],
-    source: "Comunidad Text2Quiz",
-    summary: "Domina los principios de la física clásica: las leyes de Newton, fuerza, energía cinética, velocidad de la luz y unidades de medida. Los fundamentos que explican cómo funciona el universo.",
-    questions: [
-      {
-        question_text: "¿Quién formuló las tres leyes del movimiento?",
-        question_type: "multiple_choice",
-        correct_answer: "Isaac Newton",
-        options: ["Albert Einstein", "Isaac Newton", "Galileo Galilei", "Stephen Hawking"],
-        explanation: "Isaac Newton formuló las tres leyes del movimiento en su obra 'Principia Mathematica' en 1687."
-      },
-      {
-        question_text: "¿Qué unidad se usa para medir la fuerza?",
-        question_type: "multiple_choice",
-        correct_answer: "Newton",
-        options: ["Joule", "Newton", "Watt", "Pascal"],
-        explanation: "El Newton (N) es la unidad del Sistema Internacional para medir la fuerza."
-      },
-      {
-        question_text: "¿Cuál es la velocidad de la luz en el vacío?",
-        question_type: "multiple_choice",
-        correct_answer: "300,000 km/s",
-        options: ["150,000 km/s", "300,000 km/s", "450,000 km/s", "600,000 km/s"],
-        explanation: "La luz viaja a aproximadamente 300,000 km/s (299,792,458 m/s exactamente) en el vacío."
-      },
-      {
-        question_text: "¿Qué dice la primera ley de Newton?",
-        question_type: "multiple_choice",
-        correct_answer: "Un objeto en reposo permanece en reposo a menos que actúe una fuerza",
-        options: ["F = ma", "Un objeto en reposo permanece en reposo a menos que actúe una fuerza", "Acción y reacción son iguales", "La energía no se crea ni se destruye"],
-        explanation: "La primera ley de Newton (inercia) establece que un objeto mantiene su estado de movimiento a menos que una fuerza actúe sobre él."
-      },
-      {
-        question_text: "¿Qué es la energía cinética?",
-        question_type: "multiple_choice",
-        correct_answer: "La energía del movimiento",
-        options: ["La energía almacenada", "La energía del movimiento", "La energía térmica", "La energía química"],
-        explanation: "La energía cinética es la energía que posee un objeto debido a su movimiento."
-      }
-    ]
-  },
-  {
-    title: "SQL y Bases de Datos",
-    difficulty: "medium",
-    category_name: "Programación",
-    tags: ["sql", "bases de datos", "backend", "queries"],
-    source: "Comunidad Text2Quiz",
-    summary: "Aprende SQL y conceptos de bases de datos: comandos SELECT, claves primarias, JOIN, CRUD y cláusulas WHERE. Esencial para cualquier desarrollador backend o data analyst.",
-    questions: [
-      {
-        question_text: "¿Qué comando SQL se usa para obtener datos de una tabla?",
-        question_type: "multiple_choice",
-        correct_answer: "SELECT",
-        options: ["GET", "SELECT", "FETCH", "RETRIEVE"],
-        explanation: "SELECT es el comando fundamental para consultar y obtener datos de una base de datos."
-      },
-      {
-        question_text: "¿Qué es una clave primaria (PRIMARY KEY)?",
-        question_type: "multiple_choice",
-        correct_answer: "Un identificador único para cada registro",
-        options: ["Una contraseña de la base de datos", "Un identificador único para cada registro", "El primer campo de una tabla", "Una clave de encriptación"],
-        explanation: "Una PRIMARY KEY identifica únicamente cada registro en una tabla, sin duplicados ni valores nulos."
-      },
-      {
-        question_text: "¿Qué hace el comando JOIN?",
-        question_type: "multiple_choice",
-        correct_answer: "Combina filas de dos o más tablas",
-        options: ["Elimina datos duplicados", "Combina filas de dos o más tablas", "Ordena los resultados", "Agrupa datos"],
-        explanation: "JOIN permite combinar datos de múltiples tablas basándose en una relación entre ellas."
-      },
-      {
-        question_text: "¿Qué significa CRUD?",
-        question_type: "multiple_choice",
-        correct_answer: "Create, Read, Update, Delete",
-        options: ["Create, Read, Update, Delete", "Copy, Run, Upload, Download", "Connect, Request, Update, Disconnect", "Code, Review, Upload, Deploy"],
-        explanation: "CRUD representa las cuatro operaciones básicas en bases de datos: Crear, Leer, Actualizar y Eliminar."
-      },
-      {
-        question_text: "¿Qué hace la cláusula WHERE?",
-        question_type: "multiple_choice",
-        correct_answer: "Filtra registros según una condición",
-        options: ["Ordena los resultados", "Filtra registros según una condición", "Agrupa datos", "Limita la cantidad de resultados"],
-        explanation: "WHERE permite filtrar registros que cumplan con una condición específica."
-      }
-    ]
-  },
-  {
-    title: "Git y Control de Versiones",
+    title: "HTML y CSS para Principiantes",
     difficulty: "easy",
     category_name: "Programación",
-    tags: ["git", "github", "versionado", "desarrollo"],
+    tags: ["html", "css", "web", "frontend"],
     source: "Comunidad Text2Quiz",
-    summary: "Domina Git, la herramienta esencial de control de versiones: init, commit, push, clone y branches. Aprende a colaborar eficientemente en proyectos de desarrollo de software.",
+    summary: "Aprende los fundamentos de HTML y CSS: estructura web, etiquetas básicas, selectores CSS, box model y diseño responsive. El primer paso para crear sitios web.",
     questions: [
       {
-        question_text: "¿Qué comando crea un nuevo repositorio Git?",
+        question_text: "¿Qué significa HTML?",
         question_type: "multiple_choice",
-        correct_answer: "git init",
-        options: ["git start", "git init", "git create", "git new"],
-        explanation: "'git init' inicializa un nuevo repositorio Git en el directorio actual."
+        correct_answer: "HyperText Markup Language",
+        options: ["High Tech Modern Language", "HyperText Markup Language", "Home Tool Markup Language", "Hyper Transfer Markup Language"],
+        explanation: "HTML es el lenguaje de marcado estándar para crear páginas web."
       },
       {
-        question_text: "¿Qué hace 'git commit'?",
+        question_text: "¿Qué etiqueta se usa para crear un enlace en HTML?",
         question_type: "multiple_choice",
-        correct_answer: "Guarda los cambios en el repositorio local",
-        options: ["Sube cambios al servidor", "Guarda los cambios en el repositorio local", "Descarga cambios", "Crea una rama"],
-        explanation: "'git commit' guarda los cambios preparados (staged) en el historial del repositorio local."
+        correct_answer: "<a>",
+        options: ["<link>", "<a>", "<href>", "<url>"],
+        explanation: "La etiqueta <a> (anchor) se usa con el atributo href para crear enlaces."
       },
       {
-        question_text: "¿Qué comando sube cambios al repositorio remoto?",
+        question_text: "¿Qué significa CSS?",
         question_type: "multiple_choice",
-        correct_answer: "git push",
-        options: ["git upload", "git push", "git send", "git commit"],
-        explanation: "'git push' envía los commits locales al repositorio remoto."
+        correct_answer: "Cascading Style Sheets",
+        options: ["Computer Style Sheets", "Cascading Style Sheets", "Creative Style System", "Colorful Style Sheets"],
+        explanation: "CSS controla la presentación y diseño de las páginas web."
       },
       {
-        question_text: "¿Qué hace 'git clone'?",
+        question_text: "¿Qué propiedad CSS cambia el color del texto?",
         question_type: "multiple_choice",
-        correct_answer: "Copia un repositorio remoto",
-        options: ["Duplica un archivo", "Copia un repositorio remoto", "Crea una rama", "Deshace cambios"],
-        explanation: "'git clone' descarga una copia completa de un repositorio remoto."
+        correct_answer: "color",
+        options: ["text-color", "color", "font-color", "text-style"],
+        explanation: "La propiedad 'color' establece el color del texto en CSS."
       },
       {
-        question_text: "¿Qué es una 'branch' en Git?",
+        question_text: "¿Qué es el 'box model' en CSS?",
         question_type: "multiple_choice",
-        correct_answer: "Una línea independiente de desarrollo",
-        options: ["Un error en el código", "Una línea independiente de desarrollo", "Un servidor de Git", "Un tipo de commit"],
-        explanation: "Una branch (rama) permite desarrollar características de forma aislada del código principal."
+        correct_answer: "Content, padding, border y margin",
+        options: ["Un tipo de contenedor", "Content, padding, border y margin", "Una plantilla de diseño", "Un framework"],
+        explanation: "El box model describe las capas que rodean cada elemento HTML."
       }
     ]
   },
   {
-    title: "Arte: Pintores Famosos",
-    difficulty: "easy",
-    category_name: "Arte",
-    tags: ["arte", "pintura", "artistas", "cultura"],
-    source: "Comunidad Text2Quiz",
-    summary: "Conoce a los pintores más influyentes de la historia: da Vinci, Van Gogh, Picasso, Monet y Dalí. Aprende sobre sus obras maestras y los movimientos artísticos que revolucionaron.",
-    questions: [
-      {
-        question_text: "¿Quién pintó 'La Mona Lisa'?",
-        question_type: "multiple_choice",
-        correct_answer: "Leonardo da Vinci",
-        options: ["Michelangelo", "Leonardo da Vinci", "Rafael", "Donatello"],
-        explanation: "Leonardo da Vinci pintó la Mona Lisa entre 1503 y 1519."
-      },
-      {
-        question_text: "¿Qué artista es famoso por cortar su oreja?",
-        question_type: "multiple_choice",
-        correct_answer: "Vincent van Gogh",
-        options: ["Pablo Picasso", "Vincent van Gogh", "Salvador Dalí", "Claude Monet"],
-        explanation: "Vincent van Gogh se cortó parte de su oreja izquierda en 1888 durante una crisis mental."
-      },
-      {
-        question_text: "¿Quién pintó 'El Guernica'?",
-        question_type: "multiple_choice",
-        correct_answer: "Pablo Picasso",
-        options: ["Pablo Picasso", "Joan Miró", "Salvador Dalí", "Francisco Goya"],
-        explanation: "Pablo Picasso pintó el Guernica en 1937 como protesta contra el bombardeo de Guernica."
-      },
-      {
-        question_text: "¿Qué movimiento artístico fundó Claude Monet?",
-        question_type: "multiple_choice",
-        correct_answer: "Impresionismo",
-        options: ["Cubismo", "Surrealismo", "Impresionismo", "Expresionismo"],
-        explanation: "Claude Monet fue uno de los fundadores del Impresionismo francés."
-      },
-      {
-        question_text: "¿Quién pintó 'La persistencia de la memoria' con relojes derretidos?",
-        question_type: "multiple_choice",
-        correct_answer: "Salvador Dalí",
-        options: ["Pablo Picasso", "Salvador Dalí", "René Magritte", "Joan Miró"],
-        explanation: "Salvador Dalí pintó esta icónica obra surrealista en 1931."
-      }
-    ]
-  },
-  {
-    title: "Astronomía y Espacio",
-    difficulty: "medium",
-    category_name: "Ciencias",
-    tags: ["astronomía", "espacio", "planetas", "universo"],
-    source: "Comunidad Text2Quiz",
-    summary: "Viaja por el sistema solar y más allá: planetas, estrellas, galaxias y el cosmos. Descubre los misterios del universo desde Júpiter hasta la Vía Láctea.",
-    questions: [
-      {
-        question_text: "¿Cuál es el planeta más grande del sistema solar?",
-        question_type: "multiple_choice",
-        correct_answer: "Júpiter",
-        options: ["Saturno", "Júpiter", "Urano", "Neptuno"],
-        explanation: "Júpiter es el planeta más grande, con una masa mayor que la de todos los demás planetas combinados."
-      },
-      {
-        question_text: "¿Cuántos planetas hay en nuestro sistema solar?",
-        question_type: "multiple_choice",
-        correct_answer: "8",
-        options: ["7", "8", "9", "10"],
-        explanation: "Hay 8 planetas desde que Plutón fue reclasificado como planeta enano en 2006."
-      },
-      {
-        question_text: "¿Qué es una estrella?",
-        question_type: "multiple_choice",
-        correct_answer: "Una esfera de plasma que produce luz y calor",
-        options: ["Un planeta sin atmósfera", "Una esfera de plasma que produce luz y calor", "Un asteroide brillante", "Un cometa"],
-        explanation: "Las estrellas son esferas de plasma que generan energía mediante fusión nuclear."
-      },
-      {
-        question_text: "¿Cuál es la estrella más cercana a la Tierra?",
-        question_type: "multiple_choice",
-        correct_answer: "El Sol",
-        options: ["Alpha Centauri", "Sirius", "El Sol", "Betelgeuse"],
-        explanation: "El Sol es nuestra estrella más cercana, a unos 150 millones de kilómetros."
-      },
-      {
-        question_text: "¿Qué es la Vía Láctea?",
-        question_type: "multiple_choice",
-        correct_answer: "Nuestra galaxia",
-        options: ["Un planeta", "Una nebulosa", "Nuestra galaxia", "Un agujero negro"],
-        explanation: "La Vía Láctea es la galaxia espiral que contiene nuestro sistema solar."
-      }
-    ]
-  },
-  {
-    title: "Música: Teoría Básica",
-    difficulty: "easy",
-    category_name: "Música",
-    tags: ["música", "teoría musical", "notas", "arte"],
-    source: "Comunidad Text2Quiz",
-    summary: "Aprende los fundamentos de la teoría musical: escalas, acordes, instrumentos, notación dinámica y afinación. Perfecto para principiantes que quieren entender la música.",
-    questions: [
-      {
-        question_text: "¿Cuántas notas tiene la escala musical?",
-        question_type: "multiple_choice",
-        correct_answer: "7",
-        options: ["5", "7", "8", "12"],
-        explanation: "La escala musical tiene 7 notas: Do, Re, Mi, Fa, Sol, La, Si."
-      },
-      {
-        question_text: "¿Qué es un acorde?",
-        question_type: "multiple_choice",
-        correct_answer: "Tres o más notas tocadas simultáneamente",
-        options: ["Una sola nota", "Dos notas", "Tres o más notas tocadas simultáneamente", "Una secuencia de notas"],
-        explanation: "Un acorde es la combinación de tres o más notas diferentes tocadas al mismo tiempo."
-      },
-      {
-        question_text: "¿Qué instrumento tiene 88 teclas?",
-        question_type: "multiple_choice",
-        correct_answer: "Piano",
-        options: ["Órgano", "Piano", "Sintetizador", "Acordeón"],
-        explanation: "El piano estándar tiene 88 teclas: 52 blancas y 36 negras."
-      },
-      {
-        question_text: "¿Qué significa 'forte' en música?",
-        question_type: "multiple_choice",
-        correct_answer: "Tocar fuerte o alto",
-        options: ["Tocar rápido", "Tocar fuerte o alto", "Tocar suave", "Tocar lento"],
-        explanation: "'Forte' indica que se debe tocar con intensidad fuerte o volumen alto."
-      },
-      {
-        question_text: "¿Cuántas cuerdas tiene una guitarra estándar?",
-        question_type: "multiple_choice",
-        correct_answer: "6",
-        options: ["4", "5", "6", "7"],
-        explanation: "Una guitarra estándar tiene 6 cuerdas, afinadas (de grave a agudo): Mi, La, Re, Sol, Si, Mi."
-      }
-    ]
-  },
-  {
-    title: "Economía Básica",
-    difficulty: "medium",
-    category_name: "Economía",
-    tags: ["economía", "finanzas", "conceptos", "negocios"],
-    source: "Comunidad Text2Quiz",
-    summary: "Entiende conceptos económicos fundamentales: inflación, PIB, oferta y demanda, desempleo y monopolios. Conocimiento esencial para entender cómo funciona la economía mundial.",
-    questions: [
-      {
-        question_text: "¿Qué es la inflación?",
-        question_type: "multiple_choice",
-        correct_answer: "El aumento generalizado de precios",
-        options: ["La disminución de precios", "El aumento generalizado de precios", "El valor del dinero", "La tasa de interés"],
-        explanation: "La inflación es el aumento sostenido y generalizado del nivel de precios en una economía."
-      },
-      {
-        question_text: "¿Qué es el PIB?",
-        question_type: "multiple_choice",
-        correct_answer: "Producto Interno Bruto",
-        options: ["Precio Interno Básico", "Producto Interno Bruto", "Precio Interno Bruto", "Producto Internacional Básico"],
-        explanation: "El PIB es el valor total de todos los bienes y servicios producidos en un país durante un periodo."
-      },
-      {
-        question_text: "¿Qué es la oferta y demanda?",
-        question_type: "multiple_choice",
-        correct_answer: "La relación entre cantidad disponible y deseada de un bien",
-        options: ["Un tipo de impuesto", "La relación entre cantidad disponible y deseada de un bien", "Una tasa de interés", "Un indicador bursátil"],
-        explanation: "La ley de oferta y demanda determina los precios según la cantidad disponible y la cantidad que los consumidores quieren."
-      },
-      {
-        question_text: "¿Qué es el desempleo?",
-        question_type: "multiple_choice",
-        correct_answer: "Personas que buscan trabajo pero no lo encuentran",
-        options: ["Personas que no quieren trabajar", "Personas que buscan trabajo pero no lo encuentran", "Personas jubiladas", "Personas que estudian"],
-        explanation: "El desempleo mide el porcentaje de la población activa que busca empleo pero no lo consigue."
-      },
-      {
-        question_text: "¿Qué es un monopolio?",
-        question_type: "multiple_choice",
-        correct_answer: "Cuando una empresa controla todo el mercado",
-        options: ["Muchas empresas compitiendo", "Cuando una empresa controla todo el mercado", "Un tipo de impuesto", "Una forma de gobierno"],
-        explanation: "Un monopolio existe cuando una sola empresa domina completamente un mercado sin competencia."
-      }
-    ]
-  },
-  {
-    title: "Ciberseguridad Básica",
+    title: "Excel: Fórmulas y Funciones Básicas",
     difficulty: "medium",
     category_name: "Tecnología",
-    tags: ["seguridad", "ciberseguridad", "tecnología", "hacking"],
+    tags: ["excel", "hojas de cálculo", "productividad", "oficina"],
     source: "Comunidad Text2Quiz",
-    summary: "Protégete en el mundo digital: phishing, VPN, firewalls, autenticación de dos factores y ransomware. Aprende a mantener tus datos seguros en internet.",
+    summary: "Domina Excel para trabajo y análisis: fórmulas básicas, SUMA, PROMEDIO, SI, BUSCARV y tablas dinámicas. Herramientas esenciales para cualquier profesional.",
     questions: [
       {
-        question_text: "¿Qué es phishing?",
+        question_text: "¿Qué función suma un rango de celdas en Excel?",
         question_type: "multiple_choice",
-        correct_answer: "Engañar a usuarios para obtener información confidencial",
-        options: ["Un tipo de virus", "Engañar a usuarios para obtener información confidencial", "Una técnica de encriptación", "Un firewall"],
-        explanation: "Phishing es una técnica donde atacantes se hacen pasar por entidades legítimas para robar datos."
+        correct_answer: "=SUMA()",
+        options: ["=TOTAL()", "=SUMA()", "=SUMAR()", "=ADD()"],
+        explanation: "=SUMA() o =SUM() suma todos los valores de un rango de celdas."
       },
       {
-        question_text: "¿Qué es una VPN?",
+        question_text: "¿Qué hace la función PROMEDIO?",
         question_type: "multiple_choice",
-        correct_answer: "Virtual Private Network - red privada virtual",
-        options: ["Very Private Network", "Virtual Private Network - red privada virtual", "Virus Protection Network", "Virtual Public Network"],
-        explanation: "Una VPN crea una conexión segura y encriptada sobre una red menos segura como Internet."
+        correct_answer: "Calcula la media aritmética de un rango",
+        options: ["Suma valores", "Calcula la media aritmética de un rango", "Cuenta celdas", "Multiplica valores"],
+        explanation: "PROMEDIO calcula la media dividiendo la suma entre el número de valores."
       },
       {
-        question_text: "¿Qué hace un firewall?",
+        question_text: "¿Cómo se inicia una fórmula en Excel?",
         question_type: "multiple_choice",
-        correct_answer: "Controla el tráfico de red entrante y saliente",
-        options: ["Elimina virus", "Controla el tráfico de red entrante y saliente", "Encripta archivos", "Hace copias de seguridad"],
-        explanation: "Un firewall monitorea y controla el tráfico de red según reglas de seguridad predeterminadas."
+        correct_answer: "Con el símbolo =",
+        options: ["Con el símbolo #", "Con el símbolo =", "Con el símbolo *", "Con paréntesis ()"],
+        explanation: "Todas las fórmulas en Excel comienzan con el signo igual (=)."
       },
       {
-        question_text: "¿Qué es la autenticación de dos factores (2FA)?",
+        question_text: "¿Qué función se usa para buscar valores en una tabla?",
         question_type: "multiple_choice",
-        correct_answer: "Usar dos métodos para verificar la identidad",
-        options: ["Tener dos contraseñas", "Usar dos métodos para verificar la identidad", "Iniciar sesión dos veces", "Usar dos navegadores"],
-        explanation: "2FA añade una capa extra de seguridad requiriendo dos formas diferentes de verificación."
+        correct_answer: "BUSCARV",
+        options: ["BUSCAR", "BUSCARV", "ENCONTRAR", "CONSULTAR"],
+        explanation: "BUSCARV (VLOOKUP) busca un valor en la primera columna y devuelve un valor de otra columna."
       },
       {
-        question_text: "¿Qué es ransomware?",
+        question_text: "¿Qué hace la función SI?",
         question_type: "multiple_choice",
-        correct_answer: "Malware que encripta archivos y pide rescate",
-        options: ["Un programa de seguridad", "Malware que encripta archivos y pide rescate", "Un tipo de firewall", "Una técnica de encriptación"],
-        explanation: "Ransomware bloquea el acceso a archivos o sistemas hasta que se pague un rescate."
+        correct_answer: "Evalúa una condición y retorna valores diferentes",
+        options: ["Suma valores", "Evalúa una condición y retorna valores diferentes", "Busca datos", "Cuenta celdas"],
+        explanation: "SI (IF) evalúa una condición lógica y retorna un valor si es verdadera, otro si es falsa."
       }
     ]
   },
   {
-    title: "React.js Fundamentals",
-    difficulty: "hard",
-    category_name: "Programación",
-    tags: ["react", "javascript", "frontend", "web"],
+    title: "Arquitectura Clásica",
+    difficulty: "medium",
+    category_name: "Arte",
+    tags: ["arquitectura", "arte", "historia", "edificios"],
     source: "Comunidad Text2Quiz",
-    summary: "Domina React, la librería más popular para crear interfaces: JSX, hooks (useState, useEffect), Virtual DOM y componentes. Esencial para desarrolladores frontend modernos.",
+    summary: "Explora la arquitectura a través de los siglos: órdenes clásicos, grandes edificios, estilos arquitectónicos y arquitectos legendarios. El arte de construir espacios.",
     questions: [
       {
-        question_text: "¿Qué es JSX en React?",
+        question_text: "¿Cuáles son los tres órdenes clásicos griegos?",
         question_type: "multiple_choice",
-        correct_answer: "Una extensión de sintaxis que permite escribir HTML en JavaScript",
-        options: ["Un framework", "Una extensión de sintaxis que permite escribir HTML en JavaScript", "Una librería CSS", "Un compilador"],
-        explanation: "JSX es una extensión de sintaxis que permite escribir código similar a HTML dentro de JavaScript."
+        correct_answer: "Dórico, Jónico y Corintio",
+        options: ["Gótico, Románico y Barroco", "Dórico, Jónico y Corintio", "Toscano, Compuesto y Moderno", "Bizantino, Gótico y Renacentista"],
+        explanation: "Los tres órdenes arquitectónicos griegos se distinguen por sus columnas y capiteles."
       },
       {
-        question_text: "¿Qué son los hooks en React?",
+        question_text: "¿Quién diseñó la cúpula de la Basílica de San Pedro?",
         question_type: "multiple_choice",
-        correct_answer: "Funciones que permiten usar estado y lifecycle en componentes funcionales",
-        options: ["Componentes especiales", "Funciones que permiten usar estado y lifecycle en componentes funcionales", "Eventos del DOM", "Librerías externas"],
-        explanation: "Los hooks permiten usar características de React como estado y efectos en componentes funcionales."
+        correct_answer: "Miguel Ángel",
+        options: ["Leonardo da Vinci", "Miguel Ángel", "Bernini", "Rafael"],
+        explanation: "Miguel Ángel diseñó la icónica cúpula, aunque Giacomo della Porta la completó."
       },
       {
-        question_text: "¿Para qué se usa useEffect?",
+        question_text: "¿Qué estilo arquitectónico caracteriza Notre-Dame de París?",
         question_type: "multiple_choice",
-        correct_answer: "Para manejar efectos secundarios en componentes",
-        options: ["Para crear estado", "Para manejar efectos secundarios en componentes", "Para hacer routing", "Para estilizar componentes"],
-        explanation: "useEffect permite ejecutar código después del renderizado, como llamadas a APIs o suscripciones."
+        correct_answer: "Gótico",
+        options: ["Románico", "Gótico", "Barroco", "Neoclásico"],
+        explanation: "Notre-Dame es un ejemplo emblemático de la arquitectura gótica francesa."
       },
       {
-        question_text: "¿Qué es el Virtual DOM?",
+        question_text: "¿Qué arquitecto diseñó la Sagrada Familia en Barcelona?",
         question_type: "multiple_choice",
-        correct_answer: "Una representación en memoria del DOM real",
-        options: ["Un servidor virtual", "Una representación en memoria del DOM real", "Un tipo de componente", "Una librería de routing"],
-        explanation: "El Virtual DOM es una copia ligera del DOM real que React usa para optimizar actualizaciones."
+        correct_answer: "Antoni Gaudí",
+        options: ["Le Corbusier", "Antoni Gaudí", "Frank Lloyd Wright", "Oscar Niemeyer"],
+        explanation: "Gaudí dedicó más de 40 años a este proyecto modernista aún sin terminar."
       },
       {
-        question_text: "¿Qué hace useState?",
+        question_text: "¿Qué es un arbotante en arquitectura gótica?",
         question_type: "multiple_choice",
-        correct_answer: "Crea y gestiona estado local en un componente",
-        options: ["Hace peticiones HTTP", "Crea y gestiona estado local en un componente", "Navega entre rutas", "Valida formularios"],
-        explanation: "useState es un hook que permite añadir estado local a componentes funcionales."
+        correct_answer: "Un soporte exterior que transmite el peso del techo",
+        options: ["Una ventana decorativa", "Un soporte exterior que transmite el peso del techo", "Un tipo de columna", "Una puerta ornamental"],
+        explanation: "Los arbotantes permitieron construir muros más altos y delgados con grandes ventanas."
       }
     ]
   },
   {
-    title: "Deportes: Fútbol Mundial",
+    title: "Cocina Internacional",
     difficulty: "easy",
-    category_name: "Deportes",
-    tags: ["fútbol", "deportes", "copas del mundo", "cultura"],
+    category_name: "Gastronomía",
+    tags: ["cocina", "gastronomía", "comida", "cultura"],
     source: "Comunidad Text2Quiz",
-    summary: "Demuestra tu conocimiento sobre el deporte rey: Copas del Mundo, leyendas del fútbol, reglas del juego y récords históricos. Perfecto para fanáticos del balompié.",
+    summary: "Viaja por el mundo a través de la gastronomía: platos típicos, ingredientes característicos, técnicas culinarias y tradiciones. Un festín de conocimiento culinario.",
     questions: [
       {
-        question_text: "¿Qué país ha ganado más Copas del Mundo de fútbol?",
+        question_text: "¿De qué país es originario el sushi?",
         question_type: "multiple_choice",
-        correct_answer: "Brasil",
-        options: ["Argentina", "Brasil", "Alemania", "Italia"],
-        explanation: "Brasil ha ganado 5 Copas del Mundo (1958, 1962, 1970, 1994, 2002)."
+        correct_answer: "Japón",
+        options: ["China", "Japón", "Corea", "Tailandia"],
+        explanation: "El sushi es un plato tradicional japonés de arroz con pescado crudo."
       },
       {
-        question_text: "¿Cuántos jugadores hay en un equipo de fútbol en el campo?",
+        question_text: "¿Qué ingrediente principal tiene la paella valenciana?",
         question_type: "multiple_choice",
-        correct_answer: "11",
-        options: ["10", "11", "12", "9"],
-        explanation: "Cada equipo tiene 11 jugadores en el campo, incluyendo al portero."
+        correct_answer: "Arroz",
+        options: ["Pasta", "Arroz", "Quinoa", "Trigo"],
+        explanation: "La paella es un plato de arroz tradicional de Valencia, España."
       },
       {
-        question_text: "¿Quién es considerado uno de los mejores futbolistas de todos los tiempos?",
+        question_text: "¿De dónde es originaria la pizza?",
         question_type: "multiple_choice",
-        correct_answer: "Pelé",
-        options: ["Maradona", "Pelé", "Messi", "Todos los anteriores"],
-        explanation: "Pelé, Maradona y Messi son considerados entre los mejores de la historia."
+        correct_answer: "Italia",
+        options: ["Estados Unidos", "Italia", "Grecia", "Francia"],
+        explanation: "La pizza moderna se originó en Nápoles, Italia, en el siglo XVIII."
       },
       {
-        question_text: "¿Cada cuántos años se celebra la Copa del Mundo?",
+        question_text: "¿Qué país es famoso por el curry?",
         question_type: "multiple_choice",
-        correct_answer: "4 años",
-        options: ["2 años", "3 años", "4 años", "5 años"],
-        explanation: "La Copa del Mundo de la FIFA se celebra cada 4 años."
+        correct_answer: "India",
+        options: ["Tailandia", "India", "China", "Japón"],
+        explanation: "El curry es una mezcla de especias fundamental en la cocina india."
       },
       {
-        question_text: "¿Qué color de tarjeta expulsa a un jugador del partido?",
+        question_text: "¿Qué son los tacos?",
         question_type: "multiple_choice",
-        correct_answer: "Roja",
-        options: ["Amarilla", "Roja", "Verde", "Azul"],
-        explanation: "Una tarjeta roja significa expulsión inmediata del jugador."
+        correct_answer: "Plato mexicano de tortilla con relleno",
+        options: ["Postre español", "Plato mexicano de tortilla con relleno", "Sopa tailandesa", "Pan francés"],
+        explanation: "Los tacos son un plato tradicional mexicano de tortilla de maíz o harina con diversos rellenos."
       }
     ]
   },
   {
-    title: "Mitología Griega",
+    title: "Primeros Auxilios Básicos",
+    difficulty: "medium",
+    category_name: "Salud",
+    tags: ["primeros auxilios", "salud", "emergencias", "seguridad"],
+    source: "Comunidad Text2Quiz",
+    summary: "Aprende técnicas vitales de primeros auxilios: RCP, maniobra de Heimlich, tratamiento de quemaduras y heridas. Conocimiento que puede salvar vidas.",
+    questions: [
+      {
+        question_text: "¿Qué significa RCP?",
+        question_type: "multiple_choice",
+        correct_answer: "Reanimación Cardiopulmonar",
+        options: ["Respiración Cardíaca Profunda", "Reanimación Cardiopulmonar", "Revisión Cardiovascular Periódica", "Respiración Controlada Pulmonar"],
+        explanation: "RCP es un procedimiento de emergencia para reanimar a alguien cuyo corazón se ha detenido."
+      },
+      {
+        question_text: "¿Qué hacer primero ante una herida que sangra mucho?",
+        question_type: "multiple_choice",
+        correct_answer: "Aplicar presión directa con un paño limpio",
+        options: ["Aplicar hielo", "Aplicar presión directa con un paño limpio", "Elevar la extremidad solamente", "Aplicar torniquete inmediatamente"],
+        explanation: "La presión directa es el primer paso para controlar el sangrado."
+      },
+      {
+        question_text: "¿Qué es la maniobra de Heimlich?",
+        question_type: "multiple_choice",
+        correct_answer: "Técnica para ayudar a alguien que se está asfixiando",
+        options: ["Técnica de respiración", "Técnica para ayudar a alguien que se está asfixiando", "Masaje cardíaco", "Vendaje especial"],
+        explanation: "La maniobra de Heimlich expulsa objetos que obstruyen las vías respiratorias mediante presión abdominal."
+      },
+      {
+        question_text: "¿Cómo tratar una quemadura leve?",
+        question_type: "multiple_choice",
+        correct_answer: "Enfriar con agua fría durante 10-20 minutos",
+        options: ["Aplicar mantequilla", "Enfriar con agua fría durante 10-20 minutos", "Reventar las ampollas", "Aplicar hielo directamente"],
+        explanation: "El agua fría (no helada) alivia el dolor y previene daños mayores en quemaduras leves."
+      },
+      {
+        question_text: "¿Qué número debes llamar en caso de emergencia en la mayoría de países?",
+        question_type: "multiple_choice",
+        correct_answer: "112 o 911 según el país",
+        options: ["123", "112 o 911 según el país", "999", "000"],
+        explanation: "112 es el número europeo, 911 en América, aunque puede variar por país."
+      }
+    ]
+  },
+  {
+    title: "Fotografía Digital",
+    difficulty: "medium",
+    category_name: "Fotografía",
+    tags: ["fotografía", "cámara", "arte", "técnica"],
+    source: "Comunidad Text2Quiz",
+    summary: "Domina los conceptos fotográficos: apertura, ISO, velocidad de obturación, composición y regla de tercios. Captura mejores imágenes entendiendo tu cámara.",
+    questions: [
+      {
+        question_text: "¿Qué controla la apertura del diafragma (f-stop)?",
+        question_type: "multiple_choice",
+        correct_answer: "La cantidad de luz que entra y la profundidad de campo",
+        options: ["Solo la velocidad", "La cantidad de luz que entra y la profundidad de campo", "El color de la imagen", "El enfoque automático"],
+        explanation: "Una apertura grande (f/1.8) deja entrar más luz y crea menor profundidad de campo."
+      },
+      {
+        question_text: "¿Qué hace el ISO en fotografía?",
+        question_type: "multiple_choice",
+        correct_answer: "Controla la sensibilidad del sensor a la luz",
+        options: ["Cambia el zoom", "Controla la sensibilidad del sensor a la luz", "Ajusta el color", "Modifica la resolución"],
+        explanation: "Un ISO alto (3200) es más sensible pero genera más ruido; uno bajo (100) da imágenes más limpias."
+      },
+      {
+        question_text: "¿Qué es la regla de los tercios?",
+        question_type: "multiple_choice",
+        correct_answer: "Dividir la imagen en 9 partes iguales para mejor composición",
+        options: ["Usar tres colores", "Dividir la imagen en 9 partes iguales para mejor composición", "Tomar tres fotos", "Una técnica de iluminación"],
+        explanation: "Colocar elementos importantes en las intersecciones de las líneas crea composiciones más interesantes."
+      },
+      {
+        question_text: "¿Qué es la velocidad de obturación?",
+        question_type: "multiple_choice",
+        correct_answer: "El tiempo que el sensor está expuesto a la luz",
+        options: ["La rapidez del enfoque", "El tiempo que el sensor está expuesto a la luz", "La velocidad de disparo continuo", "El tiempo de procesamiento"],
+        explanation: "Una velocidad rápida (1/1000s) congela el movimiento; una lenta (1s) crea efecto de movimiento."
+      },
+      {
+        question_text: "¿Qué tipo de lente se usa para retratos profesionales?",
+        question_type: "multiple_choice",
+        correct_answer: "Teleobjetivo medio (50-85mm)",
+        options: ["Gran angular", "Teleobjetivo medio (50-85mm)", "Ojo de pez", "Macro"],
+        explanation: "Los teleobjetivos medios (50-85mm) crean una perspectiva favorecedora y desenfoque de fondo."
+      }
+    ]
+  },
+  {
+    title: "Historia de México",
     difficulty: "medium",
     category_name: "Historia",
-    tags: ["mitología", "grecia", "dioses", "cultura"],
+    tags: ["méxico", "historia", "cultura", "latinoamérica"],
     source: "Comunidad Text2Quiz",
-    summary: "Adéntrate en el fascinante mundo de la mitología griega: dioses del Olimpo, héroes legendarios como Hércules y Perseo, y las historias que inspiraron la cultura occidental.",
+    summary: "Recorre la historia mexicana: desde las culturas prehispánicas, la conquista española, la independencia hasta la Revolución Mexicana. Un viaje por el México histórico.",
     questions: [
       {
-        question_text: "¿Quién era el dios principal del Olimpo?",
+        question_text: "¿Qué cultura construyó las pirámides de Teotihuacán?",
         question_type: "multiple_choice",
-        correct_answer: "Zeus",
-        options: ["Poseidón", "Zeus", "Hades", "Apolo"],
-        explanation: "Zeus era el rey de los dioses olímpicos y dios del cielo y el trueno."
+        correct_answer: "Teotihuacana",
+        options: ["Azteca", "Maya", "Teotihuacana", "Olmeca"],
+        explanation: "La cultura teotihuacana construyó esta gran ciudad entre el 100 a.C. y 650 d.C."
       },
       {
-        question_text: "¿Quién era la diosa de la sabiduría?",
+        question_text: "¿En qué año se consumó la independencia de México?",
         question_type: "multiple_choice",
-        correct_answer: "Atenea",
-        options: ["Afrodita", "Hera", "Atenea", "Artemisa"],
-        explanation: "Atenea era la diosa de la sabiduría, la guerra estratégica y las artes."
+        correct_answer: "1821",
+        options: ["1810", "1821", "1824", "1836"],
+        explanation: "La independencia se consumó el 27 de septiembre de 1821 con la entrada del Ejército Trigarante."
       },
       {
-        question_text: "¿Qué héroe mató a la Medusa?",
+        question_text: "¿Quién fue el líder azteca cuando llegaron los españoles?",
         question_type: "multiple_choice",
-        correct_answer: "Perseo",
-        options: ["Aquiles", "Perseo", "Hércules", "Teseo"],
-        explanation: "Perseo decapitó a Medusa usando un escudo reflectante como espejo."
+        correct_answer: "Moctezuma II",
+        options: ["Cuauhtémoc", "Moctezuma II", "Nezahualcóyotl", "Itzcoatl"],
+        explanation: "Moctezuma II gobernaba Tenochtitlan cuando Hernán Cortés llegó en 1519."
       },
       {
-        question_text: "¿Cuántos trabajos tuvo que completar Hércules?",
+        question_text: "¿Qué período histórico fue de 1910 a 1920 en México?",
         question_type: "multiple_choice",
-        correct_answer: "12",
-        options: ["7", "10", "12", "15"],
-        explanation: "Hércules completó 12 trabajos como penitencia por matar a su familia."
+        correct_answer: "La Revolución Mexicana",
+        options: ["La Reforma", "La Revolución Mexicana", "El Porfiriato", "La Guerra de Independencia"],
+        explanation: "La Revolución Mexicana fue un conflicto armado que transformó la estructura política y social."
       },
       {
-        question_text: "¿Quién era el dios del mar?",
+        question_text: "¿Quiénes fueron dos líderes importantes de la Revolución Mexicana?",
         question_type: "multiple_choice",
-        correct_answer: "Poseidón",
-        options: ["Zeus", "Poseidón", "Hades", "Ares"],
-        explanation: "Poseidón era el dios del mar, los terremotos y los caballos."
-      }
-    ]
-  },
-  {
-    title: "Cine: Películas Clásicas",
-    difficulty: "easy",
-    category_name: "Cine",
-    tags: ["cine", "películas", "directores", "cultura"],
-    source: "Comunidad Text2Quiz",
-    summary: "Celebra el séptimo arte: películas icónicas, directores legendarios, actores inolvidables y premios Oscar. Desde Titanic hasta El Padrino, demuestra tu cultura cinematográfica.",
-    questions: [
-      {
-        question_text: "¿Quién dirigió 'Titanic'?",
-        question_type: "multiple_choice",
-        correct_answer: "James Cameron",
-        options: ["Steven Spielberg", "James Cameron", "Martin Scorsese", "Christopher Nolan"],
-        explanation: "James Cameron dirigió Titanic en 1997, ganando 11 premios Oscar."
-      },
-      {
-        question_text: "¿En qué año se estrenó la primera película de Star Wars?",
-        question_type: "multiple_choice",
-        correct_answer: "1977",
-        options: ["1975", "1977", "1980", "1983"],
-        explanation: "'Star Wars: Una nueva esperanza' se estrenó el 25 de mayo de 1977."
-      },
-      {
-        question_text: "¿Quién interpreta a Jack Sparrow en 'Piratas del Caribe'?",
-        question_type: "multiple_choice",
-        correct_answer: "Johnny Depp",
-        options: ["Orlando Bloom", "Johnny Depp", "Brad Pitt", "Tom Cruise"],
-        explanation: "Johnny Depp creó el icónico personaje del Capitán Jack Sparrow."
-      },
-      {
-        question_text: "¿Qué película ganó el Oscar a Mejor Película en 1994?",
-        question_type: "multiple_choice",
-        correct_answer: "Forrest Gump",
-        options: ["Pulp Fiction", "Forrest Gump", "The Shawshank Redemption", "The Lion King"],
-        explanation: "Forrest Gump ganó 6 Oscars en 1995, incluyendo Mejor Película."
-      },
-      {
-        question_text: "¿Quién dirigió 'El Padrino'?",
-        question_type: "multiple_choice",
-        correct_answer: "Francis Ford Coppola",
-        options: ["Martin Scorsese", "Francis Ford Coppola", "Quentin Tarantino", "Brian De Palma"],
-        explanation: "Francis Ford Coppola dirigió la trilogía de El Padrino (1972, 1974, 1990)."
+        correct_answer: "Emiliano Zapata y Pancho Villa",
+        options: ["Benito Juárez y Porfirio Díaz", "Emiliano Zapata y Pancho Villa", "Miguel Hidalgo y José Morelos", "Santa Anna y Maximiliano"],
+        explanation: "Zapata lideró el sur con 'Tierra y Libertad', Villa comandó la División del Norte."
       }
     ]
   }
@@ -990,7 +495,13 @@ async function seedQuizzes() {
         'Economía': '💰',
         'Tecnología': '⚙️',
         'Deportes': '⚽',
-        'Cine': '🎬'
+        'Cine': '🎬',
+        'Marketing': '📈',
+        'Filosofía': '🤔',
+        'Psicología': '🧠',
+        'Gastronomía': '🍽️',
+        'Salud': '❤️',
+        'Fotografía': '📸'
       };
 
       // Generate slug from category name

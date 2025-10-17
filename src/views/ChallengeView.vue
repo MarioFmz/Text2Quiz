@@ -4,6 +4,7 @@ import NotificationModal from '@/components/NotificationModal.vue'
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { useToast } from '@/composables/useToast'
 import { documentsService } from '@/services/documentsService'
 import type { Question } from '@/types'
 // @ts-ignore
@@ -12,6 +13,7 @@ import Confetti from '@/utils/confetti.js'
 const route = useRoute()
 const router = useRouter()
 const { user } = useAuth()
+const { success, error: showError } = useToast()
 
 const identifier = route.params.identifier as string
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -628,6 +630,7 @@ const shareChallenge = async (includeScore = false) => {
   try {
     const url = `${window.location.origin}/challenge/${identifier}`
     let shareText = ''
+    let shareTitle = ''
 
     if (includeScore && showResults.value) {
       // Compartir después de completar (con puntuación)
@@ -641,21 +644,45 @@ const shareChallenge = async (includeScore = false) => {
       if (userRank && userRank <= 3) {
         // Si está en top 3, presumir la posición
         const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
-        shareText = `${emoji} ¡Estoy en ${positions[userRank - 1]}!\n\nAcabo de conseguir ${results.percentage}% en el desafío:\n"${quiz.value.title}"\n\n¿Puedes superarme? 👇\n${url}`
+        shareTitle = `${emoji} ¡Estoy en ${positions[userRank - 1]}!`
+        shareText = `Acabo de conseguir ${results.percentage}% en el desafío: "${quiz.value.title}"\n\n¿Puedes superarme?`
       } else {
         // Si no está en top 3, texto de reto general
-        shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${results.percentage}% en el desafío:\n"${quiz.value.title}"\n\n¡Demuestra que puedes hacerlo mejor! 👇\n${url}`
+        shareTitle = `${emoji} ¿Puedes superarme?`
+        shareText = `Acabo de conseguir ${results.percentage}% en el desafío: "${quiz.value.title}"\n\n¡Demuestra que puedes hacerlo mejor!`
       }
     } else {
       // Compartir antes de completar (invitación general)
-      shareText = `🎯 ¡Acepta el desafío!\n\n"${quiz.value.title}"\n\n📊 ${questions.value.length} preguntas\n👥 ${challenge.value.participants_count} participantes\n\n¿Tienes lo necesario para superarlo? 👇\n${url}`
+      shareTitle = `🎯 ¡Acepta el desafío!`
+      shareText = `"${quiz.value.title}"\n\n📊 ${questions.value.length} preguntas | 👥 ${challenge.value.participants_count} participantes\n\n¿Tienes lo necesario para superarlo?`
     }
 
-    await navigator.clipboard.writeText(shareText)
-    showNotif('success', '¡Mensaje copiado! Listo para compartir en redes sociales', '📋 Copiado')
+    // Si estamos en móvil y el navegador soporta la API nativa, usarla
+    if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: url
+        })
+        // No mostrar nada si el share fue exitoso (el usuario ya vio el menú nativo)
+      } catch (shareError: any) {
+        // Si el usuario canceló, no hacer nada
+        if (shareError.name === 'AbortError') {
+          return
+        }
+        // Si falló por otra razón, intentar con clipboard
+        throw shareError
+      }
+    } else {
+      // Desktop: copiar al clipboard
+      const fullText = `${shareTitle}\n\n${shareText}\n\n👇\n${url}`
+      await navigator.clipboard.writeText(fullText)
+      success('Enlace copiado al portapapeles')
+    }
   } catch (error) {
-    console.error('Error copying to clipboard:', error)
-    showNotif('error', 'No se pudo copiar el mensaje')
+    console.error('Error sharing:', error)
+    showError('No se pudo compartir el enlace')
   }
 }
 </script>

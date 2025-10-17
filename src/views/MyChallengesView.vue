@@ -68,22 +68,45 @@ const copyToClipboard = async (ranking: any) => {
     const url = getShareUrl(ranking.share_slug)
     const emoji = ranking.userScore >= 90 ? '🏆' : ranking.userScore >= 70 ? '🎯' : '💪'
 
-    // Crear texto motivador basado en la posición y puntaje
+    let shareTitle = ''
     let shareText = ''
 
     if (ranking.userRank && ranking.userRank <= 3) {
       // Si está en top 3, presumir la posición
       const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
-      shareText = `${emoji} ¡Estoy en ${positions[ranking.userRank - 1]}!\n\nAcabo de conseguir ${ranking.userScore}% en el desafío:\n"${ranking.quiz_title}"\n\n¿Puedes superarme? 👇\n${url}`
+      shareTitle = `${emoji} ¡Estoy en ${positions[ranking.userRank - 1]}!`
+      shareText = `Acabo de conseguir ${ranking.userScore}% en el desafío: "${ranking.quiz_title}"\n\n¿Puedes superarme?`
     } else {
       // Si no está en top 3, texto de reto general
-      shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${ranking.userScore}% en el desafío:\n"${ranking.quiz_title}"\n\n¡Demuestra que puedes hacerlo mejor! 👇\n${url}`
+      shareTitle = `${emoji} ¿Puedes superarme?`
+      shareText = `Acabo de conseguir ${ranking.userScore}% en el desafío: "${ranking.quiz_title}"\n\n¡Demuestra que puedes hacerlo mejor!`
     }
 
-    await navigator.clipboard.writeText(shareText)
-    success('¡Mensaje y enlace copiados! Listo para compartir')
+    // Si estamos en móvil y el navegador soporta la API nativa, usarla
+    if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: url
+        })
+        // No mostrar nada si el share fue exitoso (el usuario ya vio el menú nativo)
+      } catch (shareError: any) {
+        // Si el usuario canceló, no hacer nada
+        if (shareError.name === 'AbortError') {
+          return
+        }
+        // Si falló por otra razón, intentar con clipboard
+        throw shareError
+      }
+    } else {
+      // Desktop: copiar al clipboard
+      const fullText = `${shareTitle}\n\n${shareText}\n\n👇\n${url}`
+      await navigator.clipboard.writeText(fullText)
+      success('Enlace copiado al portapapeles')
+    }
   } catch (error) {
-    console.error('Error copying to clipboard:', error)
+    console.error('Error sharing:', error)
   }
 }
 
