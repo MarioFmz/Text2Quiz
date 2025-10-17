@@ -841,7 +841,7 @@ const shareChallenge = async (includeScore = false) => {
                     <p class="font-semibold">{{ getDisplayName(entry, index) }}</p>
                     <span v-if="entry.is_creator" class="text-lg" title="Creador del desafío">👑</span>
                   </div>
-                  <p class="text-xs text-gray-500">{{ entry.time_taken }}s</p>
+                  <p class="text-xs text-gray-500">⏱️ {{ Math.floor(entry.time_taken / 60) }}:{{ (entry.time_taken % 60).toString().padStart(2, '0') }} min</p>
                 </div>
               </div>
               <div class="text-right">
@@ -1065,7 +1065,8 @@ const shareChallenge = async (includeScore = false) => {
               <div class="text-4xl mb-2">🥇</div>
               <div class="font-black text-white text-lg mb-1 truncate">{{ getDisplayName(leaderboard[0], 0) }}</div>
               <div class="text-3xl font-black text-white mb-1">{{ leaderboard[0].percentage }}%</div>
-              <div class="text-xs text-yellow-100">{{ leaderboard[0].score }}/{{ leaderboard[0].total_questions }}</div>
+              <div class="text-xs text-yellow-100 mb-1">{{ leaderboard[0].score }}/{{ leaderboard[0].total_questions }}</div>
+              <div class="text-xs text-yellow-100">⏱️ {{ Math.floor(leaderboard[0].time_taken / 60) }}:{{ (leaderboard[0].time_taken % 60).toString().padStart(2, '0') }}</div>
             </div>
 
             <!-- 2nd Place -->
@@ -1074,7 +1075,8 @@ const shareChallenge = async (includeScore = false) => {
               <div class="text-3xl mb-2">🥈</div>
               <div class="font-bold text-gray-800 mb-1 truncate">{{ getDisplayName(leaderboard[1], 1) }}</div>
               <div class="text-2xl font-bold text-gray-800 mb-1">{{ leaderboard[1].percentage }}%</div>
-              <div class="text-xs text-gray-600">{{ leaderboard[1].score }}/{{ leaderboard[1].total_questions }}</div>
+              <div class="text-xs text-gray-600 mb-1">{{ leaderboard[1].score }}/{{ leaderboard[1].total_questions }}</div>
+              <div class="text-xs text-gray-600">⏱️ {{ Math.floor(leaderboard[1].time_taken / 60) }}:{{ (leaderboard[1].time_taken % 60).toString().padStart(2, '0') }}</div>
             </div>
 
             <!-- 3rd Place -->
@@ -1083,7 +1085,8 @@ const shareChallenge = async (includeScore = false) => {
               <div class="text-3xl mb-2">🥉</div>
               <div class="font-bold text-white mb-1 truncate">{{ getDisplayName(leaderboard[2], 2) }}</div>
               <div class="text-2xl font-bold text-white mb-1">{{ leaderboard[2].percentage }}%</div>
-              <div class="text-xs text-orange-100">{{ leaderboard[2].score }}/{{ leaderboard[2].total_questions }}</div>
+              <div class="text-xs text-orange-100 mb-1">{{ leaderboard[2].score }}/{{ leaderboard[2].total_questions }}</div>
+              <div class="text-xs text-orange-100">⏱️ {{ Math.floor(leaderboard[2].time_taken / 60) }}:{{ (leaderboard[2].time_taken % 60).toString().padStart(2, '0') }}</div>
             </div>
           </div>
 
