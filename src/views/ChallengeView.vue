@@ -142,6 +142,13 @@ const saveProgressToDatabase = async () => {
 const loadSavedProgress = async () => {
   if (!challenge.value?.id) return
 
+  // If user has already completed this challenge, clear any saved progress and don't show modal
+  if (hasCompletedBefore.value) {
+    console.log('User has already completed this challenge, clearing any saved progress')
+    await clearSavedProgress()
+    return
+  }
+
   try {
     // Try loading from database first
     const params = new URLSearchParams({
@@ -570,6 +577,42 @@ const triggerConfetti = () => {
     }, i * 200)
   }
 }
+
+// Share challenge function
+const shareChallenge = async (includeScore = false) => {
+  try {
+    const url = `${window.location.origin}/challenge/${identifier}`
+    let shareText = ''
+
+    if (includeScore && showResults.value) {
+      // Compartir después de completar (con puntuación)
+      const results = calculateResults()
+      const emoji = results.percentage >= 90 ? '🏆' : results.percentage >= 70 ? '🎯' : '💪'
+
+      // Encontrar el rank del usuario actual
+      const userAttempt = leaderboard.value.find((entry: any) => entry.user_id === user.value?.id)
+      const userRank = userAttempt ? leaderboard.value.indexOf(userAttempt) + 1 : null
+
+      if (userRank && userRank <= 3) {
+        // Si está en top 3, presumir la posición
+        const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
+        shareText = `${emoji} ¡Estoy en ${positions[userRank - 1]}!\n\nAcabo de conseguir ${results.percentage}% en el desafío "${quiz.value.title}"\n\n¿Puedes superarme?\n\n${url}`
+      } else {
+        // Si no está en top 3, texto de reto general
+        shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${results.percentage}% en el desafío "${quiz.value.title}"\n\n¡Demuestra que puedes hacerlo mejor!\n\n${url}`
+      }
+    } else {
+      // Compartir antes de completar (invitación general)
+      shareText = `🎯 ¡Acepta el desafío!\n\n"${quiz.value.title}"\n\n${questions.value.length} preguntas • ${challenge.value.participants_count} participantes\n\n¿Tienes lo necesario para superarlo?\n\n${url}`
+    }
+
+    await navigator.clipboard.writeText(shareText)
+    showNotif('success', '¡Mensaje copiado! Listo para compartir en redes sociales', '📋 Copiado')
+  } catch (error) {
+    console.error('Error copying to clipboard:', error)
+    showNotif('error', 'No se pudo copiar el mensaje')
+  }
+}
 </script>
 
 <template>
@@ -656,6 +699,13 @@ const triggerConfetti = () => {
             </button>
             <button @click="toggleLeaderboard" class="btn btn-primary w-full sm:w-auto">
               {{ showLeaderboard ? 'Ocultar' : 'Ver' }} Ranking
+            </button>
+            <button
+              @click="shareChallenge(true)"
+              class="btn btn-secondary w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <span>📤</span>
+              <span>Compartir</span>
             </button>
             <button
               @click="restartQuiz"
@@ -981,24 +1031,35 @@ const triggerConfetti = () => {
             </p>
           </div>
 
-          <button
-            @click="hasCompletedBefore ? restartQuiz() : startQuiz()"
-            :disabled="!username.trim() || regeneratingQuestions"
-            class="btn btn-primary w-full text-base sm:text-lg py-4 sm:py-5 font-bold transform hover:scale-105 transition-all shadow-xl hover:shadow-2xl disabled:transform-none disabled:hover:scale-100"
-            :class="{ 'opacity-50 cursor-not-allowed': !username.trim() || regeneratingQuestions }"
-          >
-            <span v-if="regeneratingQuestions" class="flex items-center justify-center gap-2">
-              <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Regenerando...</span>
-            </span>
-            <span v-else>
-              <span class="text-xl mr-2">🚀</span>
-              {{ startButtonText }}
-            </span>
-          </button>
+          <div class="space-y-3">
+            <button
+              @click="hasCompletedBefore ? restartQuiz() : startQuiz()"
+              :disabled="!username.trim() || regeneratingQuestions"
+              class="btn btn-primary w-full text-base sm:text-lg py-4 sm:py-5 font-bold transform hover:scale-105 transition-all shadow-xl hover:shadow-2xl disabled:transform-none disabled:hover:scale-100"
+              :class="{ 'opacity-50 cursor-not-allowed': !username.trim() || regeneratingQuestions }"
+            >
+              <span v-if="regeneratingQuestions" class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Regenerando...</span>
+              </span>
+              <span v-else>
+                <span class="text-xl mr-2">🚀</span>
+                {{ startButtonText }}
+              </span>
+            </button>
+
+            <!-- Botón de compartir -->
+            <button
+              @click="shareChallenge(false)"
+              class="btn btn-secondary w-full text-sm sm:text-base py-3 flex items-center justify-center gap-2 hover:scale-105 transition-transform"
+            >
+              <span>📤</span>
+              <span>Compartir desafío</span>
+            </button>
+          </div>
 
           <p v-if="username && !challenge.is_anonymous" class="text-xs sm:text-sm text-gray-500 mt-3 text-center">
             Participando como: <strong class="text-blue-600">{{ username }}</strong>
