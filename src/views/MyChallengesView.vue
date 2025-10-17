@@ -74,10 +74,10 @@ const copyToClipboard = async (ranking: any) => {
     if (ranking.userRank && ranking.userRank <= 3) {
       // Si está en top 3, presumir la posición
       const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
-      shareText = `${emoji} ¡Estoy en ${positions[ranking.userRank - 1]}!\n\nAcabo de conseguir ${ranking.userScore}% en el desafío "${ranking.quiz_title}"\n\n¿Puedes superarme?\n\n${url}`
+      shareText = `${emoji} ¡Estoy en ${positions[ranking.userRank - 1]}!\n\nAcabo de conseguir ${ranking.userScore}% en el desafío:\n"${ranking.quiz_title}"\n\n¿Puedes superarme? 👇\n${url}`
     } else {
       // Si no está en top 3, texto de reto general
-      shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${ranking.userScore}% en el desafío "${ranking.quiz_title}"\n\n¡Demuestra que puedes hacerlo mejor!\n\n${url}`
+      shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${ranking.userScore}% en el desafío:\n"${ranking.quiz_title}"\n\n¡Demuestra que puedes hacerlo mejor! 👇\n${url}`
     }
 
     await navigator.clipboard.writeText(shareText)

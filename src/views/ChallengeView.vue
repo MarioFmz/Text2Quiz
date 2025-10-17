@@ -29,6 +29,7 @@ const submitting = ref(false)
 const username = ref('')
 const leaderboard = ref<any[]>([])
 const showLeaderboard = ref(false)
+const showFullRanking = ref(false)
 const creatorAttempt = ref<any>(null)
 const quizStartTime = ref<number>(0)
 const isCreator = ref(false)
@@ -344,6 +345,9 @@ const loadChallenge = async () => {
     questions.value = data.questions
     documents.value = data.documents || []
 
+    // Update page meta tags for social sharing
+    updateMetaTags()
+
     // Verificar si el usuario actual es el creador
     if (user.value && challenge.value.creator_id === user.value.id) {
       isCreator.value = true
@@ -361,6 +365,43 @@ const loadChallenge = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Update meta tags for social sharing
+const updateMetaTags = () => {
+  if (!quiz.value) return
+
+  const title = `${quiz.value.title} - Desafío en Text2Quiz`
+  const description = quiz.value.summary || `¿Puedes superar este desafío? ${questions.value.length} preguntas esperan por ti.`
+  const url = `${window.location.origin}/challenge/${identifier}`
+
+  // Update document title
+  document.title = title
+
+  // Update or create meta tags
+  const updateOrCreateMeta = (property: string, content: string, isProperty = true) => {
+    const attr = isProperty ? 'property' : 'name'
+    let meta = document.querySelector(`meta[${attr}="${property}"]`)
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute(attr, property)
+      document.head.appendChild(meta)
+    }
+    meta.setAttribute('content', content)
+  }
+
+  // Open Graph
+  updateOrCreateMeta('og:title', title)
+  updateOrCreateMeta('og:description', description)
+  updateOrCreateMeta('og:url', url)
+  updateOrCreateMeta('og:type', 'website')
+
+  // Twitter
+  updateOrCreateMeta('twitter:title', title, false)
+  updateOrCreateMeta('twitter:description', description, false)
+
+  // Regular meta
+  updateOrCreateMeta('description', description, false)
 }
 
 const viewDocument = async (filePath: string) => {
@@ -520,6 +561,10 @@ const toggleLeaderboard = () => {
   showLeaderboard.value = !showLeaderboard.value
 }
 
+const toggleFullRanking = () => {
+  showFullRanking.value = !showFullRanking.value
+}
+
 const getRankEmoji = (rank: number) => {
   if (rank === 1) return '🥇'
   if (rank === 2) return '🥈'
@@ -596,14 +641,14 @@ const shareChallenge = async (includeScore = false) => {
       if (userRank && userRank <= 3) {
         // Si está en top 3, presumir la posición
         const positions = ['🥇 primer lugar', '🥈 segundo lugar', '🥉 tercer lugar']
-        shareText = `${emoji} ¡Estoy en ${positions[userRank - 1]}!\n\nAcabo de conseguir ${results.percentage}% en el desafío "${quiz.value.title}"\n\n¿Puedes superarme?\n\n${url}`
+        shareText = `${emoji} ¡Estoy en ${positions[userRank - 1]}!\n\nAcabo de conseguir ${results.percentage}% en el desafío:\n"${quiz.value.title}"\n\n¿Puedes superarme? 👇\n${url}`
       } else {
         // Si no está en top 3, texto de reto general
-        shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${results.percentage}% en el desafío "${quiz.value.title}"\n\n¡Demuestra que puedes hacerlo mejor!\n\n${url}`
+        shareText = `${emoji} ¿Puedes superarme?\n\nAcabo de conseguir ${results.percentage}% en el desafío:\n"${quiz.value.title}"\n\n¡Demuestra que puedes hacerlo mejor! 👇\n${url}`
       }
     } else {
       // Compartir antes de completar (invitación general)
-      shareText = `🎯 ¡Acepta el desafío!\n\n"${quiz.value.title}"\n\n${questions.value.length} preguntas • ${challenge.value.participants_count} participantes\n\n¿Tienes lo necesario para superarlo?\n\n${url}`
+      shareText = `🎯 ¡Acepta el desafío!\n\n"${quiz.value.title}"\n\n📊 ${questions.value.length} preguntas\n👥 ${challenge.value.participants_count} participantes\n\n¿Tienes lo necesario para superarlo? 👇\n${url}`
     }
 
     await navigator.clipboard.writeText(shareText)
@@ -1015,9 +1060,49 @@ const shareChallenge = async (includeScore = false) => {
             </div>
           </div>
 
-          <p v-if="leaderboard.length > 3" class="text-center text-xs text-gray-500 mt-4">
-            ... y {{ leaderboard.length - 3 }} retador{{ leaderboard.length - 3 > 1 ? 'es' : '' }} más
-          </p>
+          <!-- Ver ranking completo -->
+          <div v-if="leaderboard.length > 3" class="mt-4 pt-4 border-t-2 border-gray-300">
+            <button
+              @click="toggleFullRanking"
+              class="w-full px-4 py-2 text-sm font-bold text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg transition-all flex items-center justify-center gap-2 border-2 border-gray-300"
+            >
+              <span>{{ showFullRanking ? '👆' : '👇' }}</span>
+              <span>{{ showFullRanking ? 'Ocultar ranking completo' : `Ver ranking completo (${leaderboard.length} participantes)` }}</span>
+            </button>
+          </div>
+
+          <!-- Ranking completo expandible -->
+          <Transition name="expand">
+            <div v-if="showFullRanking && leaderboard.length > 3" class="mt-4 space-y-2">
+              <div
+                v-for="(entry, index) in leaderboard"
+                :key="entry.id"
+                class="flex items-center justify-between p-3 rounded-lg"
+                :class="[
+                  entry.user_id === user?.id ? 'bg-blue-100 border-2 border-blue-400' : 'bg-white border border-gray-300',
+                  entry.is_creator ? 'border-2 border-orange-300' : ''
+                ]"
+              >
+                <div class="flex items-center space-x-3">
+                  <span class="text-base font-bold min-w-[3rem]">
+                    {{ getRankEmoji(index + 1) }}
+                  </span>
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <p class="font-semibold text-gray-900">{{ getDisplayName(entry, index) }}</p>
+                      <span v-if="entry.is_creator" class="text-lg" title="Creador del desafío">👑</span>
+                      <span v-if="entry.user_id === user?.id" class="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">TÚ</span>
+                    </div>
+                    <p class="text-xs text-gray-500">⏱️ {{ Math.floor(entry.time_taken / 60) }}:{{ (entry.time_taken % 60).toString().padStart(2, '0') }} min</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-lg font-bold text-gray-900">{{ entry.percentage }}%</p>
+                  <p class="text-xs text-gray-500">{{ entry.score }}/{{ entry.total_questions }}</p>
+                </div>
+              </div>
+            </div>
+          </Transition>
         </div>
 
         <!-- CTA Principal - Super Prominente -->
