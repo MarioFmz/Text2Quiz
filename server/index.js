@@ -174,6 +174,11 @@ app.post('/api/generate-quiz', async (req, res) => {
     // Crear global challenge automáticamente
     const globalChallenge = await ensureGlobalChallenge(savedQuiz.id, document.user_id, savedQuiz.title);
 
+    // Generar podcast en background (no esperar)
+    generatePodcastInBackground(savedQuiz.id, savedQuiz.title, formattedContent).catch(err => {
+      console.error(`Error generating podcast for quiz ${savedQuiz.id}:`, err);
+    });
+
     res.json({
       success: true,
       quiz: {
@@ -396,6 +401,177 @@ FORMATO DE RESPUESTA (JSON):
 
 IMPORTANTE: Responde SOLO con el JSON, sin texto adicional.
   `.trim();
+}
+
+// Generate podcast in background (fire-and-forget)
+async function generatePodcastInBackground(quizId, quizTitle, studyMaterial) {
+  try {
+    console.log(`🎙️ Starting audio generation for quiz ${quizId}...`);
+
+    // Check if podcast already exists
+    const { data: existingFile } = await supabase.storage
+      .from('audio-summaries')
+      .list('', {
+        search: `quiz_${quizId}.mp3`
+      });
+
+    if (existingFile && existingFile.length > 0) {
+      console.log(`✅ Audio already exists for quiz ${quizId}, skipping generation`);
+      return;
+    }
+
+    const CONVERSATIONAL_THRESHOLD = 15000; // ~20-30 pages
+    const isLongContent = studyMaterial && studyMaterial.length > CONVERSATIONAL_THRESHOLD;
+
+    if (isLongContent) {
+      // For long content: simple reading with single voice
+      console.log(`📄 Content is long (${studyMaterial.length} chars), generating simple reading...`);
+
+      // Truncate to reasonable length for audio (OpenAI TTS has 4096 char limit per request)
+      const MAX_AUDIO_LENGTH = 20000; // ~25-30 pages maximum
+      const textToRead = studyMaterial.substring(0, MAX_AUDIO_LENGTH);
+
+      // Split into chunks of 4000 characters to respect OpenAI limits
+      const chunkSize = 4000;
+      const chunks = [];
+      for (let i = 0; i < textToRead.length; i += chunkSize) {
+        chunks.push(textToRead.substring(i, i + chunkSize));
+      }
+
+      console.log(`📝 Generating audio for ${chunks.length} chunks...`);
+      const audioBuffers = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        console.log(`   ${i + 1}/${chunks.length} - Reading chunk ${i + 1}...`);
+
+        const audioResponse = await openai.audio.speech.create({
+          model: 'tts-1',
+          voice: 'nova', // Use Nova for simple reading
+          input: chunks[i],
+          response_format: 'mp3'
+        });
+
+        const arrayBuffer = await audioResponse.arrayBuffer();
+        audioBuffers.push(Buffer.from(arrayBuffer));
+      }
+
+      console.log(`✅ All audio generated, combining ${audioBuffers.length} chunks...`);
+      const combinedBuffer = Buffer.concat(audioBuffers);
+
+      // Upload to Supabase
+      const filePath = `quiz_${quizId}.mp3`;
+      console.log(`☁️  Uploading to Supabase Storage: ${filePath}`);
+
+      const { error: uploadError } = await supabase.storage
+        .from('audio-summaries')
+        .upload(filePath, combinedBuffer, {
+          contentType: 'audio/mpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      console.log(`✅ Simple reading generated successfully for quiz ${quizId}!`);
+      console.log(`📦 File size: ${(combinedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+
+    } else {
+      // For short content: conversational podcast
+      console.log(`🎙️ Content is short (${studyMaterial.length} chars), generating conversational podcast...`);
+
+      // 1. Generate conversational script with GPT-4o-mini
+      console.log(`📝 Generating conversational script...`);
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Eres un experto creando podcasts educativos conversacionales en español.
+
+Crea un diálogo natural entre dos presentadores:
+- Ana (entusiasta y didáctica, hace preguntas y busca claridad)
+- Carlos (analítico y curioso, explica conceptos y profundiza)
+
+El diálogo debe:
+1. Ser natural y entretenido, como una conversación real
+2. Cubrir los conceptos clave del material
+3. Durar aproximadamente 3-5 minutos (800-1200 palabras)
+4. Incluir ejemplos y analogías cuando sea apropiado
+5. Terminar con un resumen de puntos clave
+
+IMPORTANTE: Responde SOLO con JSON válido en este formato exacto:
+{
+  "dialogue": [
+    {"speaker": "Ana", "text": "Hola Carlos, hoy vamos a hablar sobre..."},
+    {"speaker": "Carlos", "text": "Así es Ana. Este tema es fascinante porque..."},
+    ...
+  ]
+}`
+          },
+          {
+            role: 'user',
+            content: `Crea un podcast educativo conversacional sobre el siguiente material de estudio:\n\n${studyMaterial.substring(0, 4000)}`
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.8
+      });
+
+      const response = JSON.parse(completion.choices[0].message.content || '{}');
+      const script = response.dialogue || response.podcast;
+
+      if (!script || script.length === 0) {
+        throw new Error('No dialogue generated');
+      }
+
+      console.log(`✅ Script generated: ${script.length} dialogue turns`);
+
+      // 2. Generate audio for each turn with OpenAI TTS
+      console.log(`🎤 Generating audio for ${script.length} dialogue turns...`);
+      const audioBuffers = [];
+
+      for (let i = 0; i < script.length; i++) {
+        const turn = script[i];
+        const voice = turn.speaker === 'Ana' ? 'nova' : 'onyx';
+
+        console.log(`   ${i + 1}/${script.length} - ${turn.speaker}: ${turn.text.substring(0, 50)}...`);
+
+        const audioResponse = await openai.audio.speech.create({
+          model: 'tts-1',
+          voice: voice,
+          input: turn.text,
+          response_format: 'mp3'
+        });
+
+        const arrayBuffer = await audioResponse.arrayBuffer();
+        audioBuffers.push(Buffer.from(arrayBuffer));
+      }
+
+      console.log(`✅ All audio generated, combining ${audioBuffers.length} segments...`);
+
+      // 3. Combine all audio buffers into single MP3
+      const combinedBuffer = Buffer.concat(audioBuffers);
+
+      // 4. Upload to Supabase Storage
+      const filePath = `quiz_${quizId}.mp3`;
+      console.log(`☁️  Uploading to Supabase Storage: ${filePath}`);
+
+      const { error: uploadError } = await supabase.storage
+        .from('audio-summaries')
+        .upload(filePath, combinedBuffer, {
+          contentType: 'audio/mpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      console.log(`✅ Conversational podcast generated successfully for quiz ${quizId}!`);
+      console.log(`📦 File size: ${(combinedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+    }
+
+  } catch (error) {
+    console.error(`❌ Error generating podcast for quiz ${quizId}:`, error);
+    // Don't throw - this is a background task, failures shouldn't break quiz creation
+  }
 }
 
 // Generate formatted, readable content from extracted text for study material
