@@ -3,7 +3,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import ShareQuizButton from '@/components/ShareQuizButton.vue'
 import ShareResultsButtons from '@/components/ShareResultsButtons.vue'
 import NotificationModal from '@/components/NotificationModal.vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { quizzesService } from '@/services/quizzesService'
@@ -12,6 +12,8 @@ import type { Question, QuizCategory } from '@/types'
 import axios from 'axios'
 // @ts-ignore
 import Confetti from '@/utils/confetti.js'
+import OpenAI from 'openai'
+import { supabase } from '@/services/supabase'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,12 @@ const { user } = useAuth()
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 const quizId = route.params.id as string
+
+// OpenAI client
+const openai = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true
+})
 
 const quiz = ref<any>(null)
 const questions = ref<Question[]>([])
@@ -36,6 +44,13 @@ const expandedAttemptId = ref<string | null>(null)
 const attemptAnswers = ref<Record<string, any>>({})
 const loadingAttempt = ref<string | null>(null)
 const showStudyMaterial = ref(false)
+
+// Audio playback state
+const isPlayingAudio = ref(false)
+const isPausedAudio = ref(false)
+const isGeneratingPodcast = ref(false)
+const audioElement = ref<HTMLAudioElement | null>(null)
+const audioBlobUrl = ref<string | null>(null)
 
 // Regeneration modal
 const showRegenerateModal = ref(false)
@@ -490,6 +505,281 @@ const triggerConfetti = () => {
     }, i * 400) // 400ms entre cada explosión
   }
 }
+
+// ============================================
+// AUDIO / PODCAST FUNCTIONS (OpenAI TTS + Supabase)
+// ============================================
+
+// Generate conversational podcast script with two hosts
+const generatePodcastScript = async (): Promise<Array<{speaker: string, text: string}> | null> => {
+  if (!quiz.value) return null
+
+  const content = quiz.value.formatted_content || quiz.value.combined_content || ''
+  if (!content) {
+    return null
+  }
+
+  try {
+    console.log('📝 Llamando a GPT-4o-mini para generar guión...')
+
+    // Use GPT-4 to create a conversational podcast script
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Eres un experto creando podcasts educativos conversacionales en español.
+          Crea un diálogo natural entre dos presentadores: Ana (entusiasta y didáctica) y Carlos (analítico y curioso).
+          El podcast debe explicar el contenido de forma entretenida, con ejemplos y preguntas que ayuden a entender mejor.
+          Formato: Array de objetos JSON con {speaker: "Ana" o "Carlos", text: "texto del diálogo"}.
+          Haz que sea dinámico, con turnos cortos (2-3 frases por turno) y que se complementen.
+          Duración total: aproximadamente 3-4 minutos de audio.`
+        },
+        {
+          role: 'user',
+          content: `Crea un podcast educativo sobre el tema: "${quiz.value.title}"\n\nContenido a explicar:\n${content.substring(0, 3000)}`
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.8
+    })
+
+    console.log('✅ Respuesta recibida de GPT-4o-mini')
+
+    const response = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log('📋 Estructura del guión:', response)
+
+    // El modelo puede devolver {dialogue: [...]} o {podcast: [...]}
+    const script = response.dialogue || response.podcast
+
+    if (script && Array.isArray(script)) {
+      console.log(`✅ Guión válido con ${script.length} turnos`)
+      return script
+    }
+
+    // Fallback si el formato no es el esperado
+    console.error('❌ Formato inesperado del guión:', response)
+    return null
+  } catch (error) {
+    console.error('❌ Error generating podcast script:', error)
+    showNotif('error', `Error al generar guión: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    return null
+  }
+}
+
+// Check if audio exists in Supabase Storage
+const checkAudioExists = async (): Promise<string | null> => {
+  if (!quiz.value) return null
+
+  try {
+    const filePath = `quiz_${quiz.value.id}.mp3`
+
+    // Try to get public URL
+    const { data } = supabase.storage
+      .from('audio-summaries')
+      .getPublicUrl(filePath)
+
+    // Verify if file actually exists by trying to fetch
+    try {
+      const response = await fetch(data.publicUrl, { method: 'HEAD' })
+      if (response.ok) {
+        return data.publicUrl
+      }
+    } catch (fetchError) {
+      // File doesn't exist, which is normal for first time
+      console.log('Audio file does not exist yet, will generate')
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error checking audio existence:', error)
+    return null
+  }
+}
+
+// Generate conversational podcast audio and upload to Supabase
+const generateAndUploadAudio = async (): Promise<string | null> => {
+  if (!quiz.value) return null
+
+  try {
+    console.log('🎙️ Generando guión del podcast...')
+
+    // Generate conversational script
+    const script = await generatePodcastScript()
+
+    if (!script || script.length === 0) {
+      showNotif('error', 'No se pudo generar el guión del podcast')
+      return null
+    }
+
+    console.log(`✅ Guión generado con ${script.length} turnos de conversación`)
+
+    // Generate audio for each dialogue turn with appropriate voice
+    const audioBlobs: Blob[] = []
+
+    for (let i = 0; i < script.length; i++) {
+      const turn = script[i]
+      // Ana = Nova (female), Carlos = Onyx (male)
+      const voice = turn.speaker === 'Ana' ? 'nova' : 'onyx'
+
+      console.log(`🎤 Generando audio ${i + 1}/${script.length}: ${turn.speaker}`)
+
+      const response = await openai.audio.speech.create({
+        model: 'tts-1',
+        voice: voice,
+        input: turn.text,
+        response_format: 'mp3'
+      })
+
+      const blob = await response.blob()
+      audioBlobs.push(blob)
+    }
+
+    console.log('🔗 Combinando audios...')
+
+    // Combine all audio blobs into one
+    const combinedBlob = new Blob(audioBlobs, { type: 'audio/mpeg' })
+
+    console.log(`📦 Tamaño total: ${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB`)
+    console.log('☁️ Subiendo a Supabase...')
+
+    // Upload to Supabase Storage
+    const filePath = `quiz_${quiz.value.id}.mp3`
+    const { data, error } = await supabase.storage
+      .from('audio-summaries')
+      .upload(filePath, combinedBlob, {
+        contentType: 'audio/mpeg',
+        upsert: true // Replace if exists
+      })
+
+    if (error) {
+      console.error('❌ Error uploading audio to Supabase:', error)
+      return null
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('audio-summaries')
+      .getPublicUrl(filePath)
+
+    console.log('✅ Podcast generado exitosamente!')
+    console.log('🔗 URL:', urlData.publicUrl)
+
+    return urlData.publicUrl
+  } catch (error) {
+    console.error('❌ Error generating podcast audio:', error)
+    return null
+  }
+}
+
+// Play audio
+const playAudio = async () => {
+  if (!quiz.value) return
+
+  // If paused, just resume
+  if (isPausedAudio.value && audioElement.value) {
+    audioElement.value.play()
+    isPlayingAudio.value = true
+    isPausedAudio.value = false
+    return
+  }
+
+  // If already have audio element, just play
+  if (audioElement.value && audioBlobUrl.value) {
+    audioElement.value.play()
+    isPlayingAudio.value = true
+    return
+  }
+
+  isGeneratingPodcast.value = true
+
+  try {
+    // Check if audio already exists in Supabase
+    let audioUrl = await checkAudioExists()
+
+    // If doesn't exist, generate it
+    if (!audioUrl) {
+      // Check if there's study material
+      const content = quiz.value.formatted_content || quiz.value.combined_content || ''
+      if (!content) {
+        showNotif('error', 'No hay material de estudio disponible')
+        isGeneratingPodcast.value = false
+        return
+      }
+
+      // Generate and upload conversational podcast audio
+      audioUrl = await generateAndUploadAudio()
+
+      if (!audioUrl) {
+        showNotif('error', 'Error al generar el podcast. Por favor, intenta de nuevo.')
+        isGeneratingPodcast.value = false
+        return
+      }
+    }
+
+    // Create audio element
+    const audio = new Audio(audioUrl)
+    audioElement.value = audio
+    audioBlobUrl.value = audioUrl
+
+    // Event listeners
+    audio.onplay = () => {
+      isPlayingAudio.value = true
+      isPausedAudio.value = false
+    }
+
+    audio.onpause = () => {
+      isPlayingAudio.value = false
+      isPausedAudio.value = true
+    }
+
+    audio.onended = () => {
+      isPlayingAudio.value = false
+      isPausedAudio.value = false
+    }
+
+    audio.onerror = () => {
+      console.error('Audio playback error')
+      isPlayingAudio.value = false
+      isPausedAudio.value = false
+      showNotif('error', 'Error al reproducir el audio')
+    }
+
+    // Start playing
+    await audio.play()
+  } catch (error) {
+    console.error('Error playing audio:', error)
+    showNotif('error', 'Error al reproducir el audio')
+  } finally {
+    isGeneratingPodcast.value = false
+  }
+}
+
+// Pause audio
+const pauseAudio = () => {
+  if (audioElement.value && !audioElement.value.paused) {
+    audioElement.value.pause()
+  }
+}
+
+// Stop audio
+const stopAudio = () => {
+  if (audioElement.value) {
+    audioElement.value.pause()
+    audioElement.value.currentTime = 0
+    isPlayingAudio.value = false
+    isPausedAudio.value = false
+  }
+}
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  // Stop audio if playing
+  if (audioElement.value) {
+    audioElement.value.pause()
+    audioElement.value.currentTime = 0
+  }
+})
 </script>
 
 <template>
@@ -613,15 +903,43 @@ const triggerConfetti = () => {
                   <p class="text-xs sm:text-sm text-gray-600">Contenido formateado para tu repaso</p>
                 </div>
               </div>
-              <svg
-                class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 transition-transform duration-200"
-                :class="{ 'rotate-180': showStudyMaterial }"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
+              <div class="flex items-center gap-2">
+                <!-- Audio Button -->
+                <button
+                  @click.stop="isPlayingAudio ? pauseAudio() : playAudio()"
+                  :disabled="isGeneratingPodcast"
+                  class="p-2 rounded-lg bg-white hover:bg-blue-50 transition-colors border-2 border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :title="isPlayingAudio ? 'Pausar podcast' : isPausedAudio ? 'Continuar podcast' : 'Escuchar podcast'"
+                >
+                  <span v-if="isGeneratingPodcast" class="flex items-center justify-center">
+                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </span>
+                  <span v-else-if="isPlayingAudio" class="text-xl">⏸️</span>
+                  <span v-else-if="isPausedAudio" class="text-xl">▶️</span>
+                  <span v-else class="text-xl">🎧</span>
+                </button>
+                <!-- Stop Button (only show when playing or paused) -->
+                <button
+                  v-if="isPlayingAudio || isPausedAudio"
+                  @click.stop="stopAudio()"
+                  class="p-2 rounded-lg bg-white hover:bg-red-50 transition-colors border-2 border-red-300"
+                  title="Detener audio"
+                >
+                  <span class="text-xl">⏹️</span>
+                </button>
+                <svg
+                  class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 transition-transform duration-200"
+                  :class="{ 'rotate-180': showStudyMaterial }"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </button>
 
             <!-- Collapsible Content -->
